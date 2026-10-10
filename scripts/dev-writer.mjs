@@ -1,7 +1,7 @@
 // Dev-only file writer, mounted as a Vite middleware in astro.config.mjs.
 // Lets the admin page save notes/data straight into the project during
 // `npm run dev`. Not part of the build, so the hosted site is untouched.
-import { writeFile, mkdir, access, readFile } from 'node:fs/promises';
+import { writeFile, mkdir, access, readFile, unlink } from 'node:fs/promises';
 import { resolve, dirname, normalize } from 'node:path';
 
 const ALLOWED = ['src/content/notes/', 'src/data/'];
@@ -37,6 +37,17 @@ export default function devWriter() {
         } catch {
           json(res, 404, { ok: false, error: '文件不存在' });
         }
+      });
+      server.middlewares.use('/__dev/delete', async (req, res) => {
+        if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method' });
+        let raw = '';
+        for await (const chunk of req) raw += chunk;
+        let body;
+        try { body = JSON.parse(raw); } catch { return json(res, 400, { ok: false, error: '请求格式错误' }); }
+        const abs = safePath(root, body.path);
+        if (!abs) return json(res, 400, { ok: false, error: '路径不允许' });
+        try { await unlink(abs); json(res, 200, { ok: true }); }
+        catch { json(res, 404, { ok: false, error: '文件不存在' }); }
       });
       server.middlewares.use('/__dev/write', async (req, res) => {
         if (req.method === 'GET') return json(res, 200, { ok: true });
