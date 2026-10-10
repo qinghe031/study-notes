@@ -1,0 +1,11 @@
+---
+import { SITE } from '../lib/site';
+const year = new Date().getFullYear();
+---
+
+<footer class="relative z-10 mt-12 border-t border-border">
+  <div class="shell flex flex-col items-center gap-2 py-8 text-center text-xs text-muted-foreground">
+    <p>© {year} {SITE.author} · {SITE.title}</p>
+    <p>{SITE.footer}</p>
+  </div>
+</footer>

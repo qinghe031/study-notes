@@ -1,0 +1,23 @@
+---
+import { withBase } from '../../lib/url';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../../components/Hero.astro';
+import { getNotes, getCategories } from '../../lib/content';
+
+const notes = await getNotes();
+const categories = getCategories(notes);
+---
+
+<BaseLayout title="分类">
+  <Hero eyebrow="Categories" title="分类" subtitle={`共 ${categories.length} 个分类`} />
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {
+      categories.map((c, i) => (
+        <a href={withBase(`/category/${c.slug}/`)} class="card card-hover reveal flex items-center justify-between p-5" style={`animation-delay:${i * 40}ms`}>
+          <span class="font-medium">{c.name}</span>
+          <span class="chip">{c.count} 篇</span>
+        </a>
+      ))
+    }
+  </div>
+</BaseLayout>

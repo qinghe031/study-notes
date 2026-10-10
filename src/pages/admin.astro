@@ -1,0 +1,459 @@
+---
+import { withBase } from '../lib/url';
+// Local admin panel. This is a static site, so "admin" means: fill in a form,
+// get the exact file content back, save it into the project, rebuild.
+// Nothing here talks to a server. The page is intentionally not linked from
+// the navbar — reach it at /admin/.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import { GUESTBOOK_ENTRIES, NOW_PLAYING, ALBUMS } from '../lib/site';
+import { getNotes, formatDate } from '../lib/content';
+
+const notes = await getNotes();
+const today = formatDate(new Date());
+const guestbookJson = JSON.stringify({ note: '留言板。', entries: GUESTBOOK_ENTRIES }, null, 2);
+const nowPlayingJson = JSON.stringify({ note: '在听什么。填网易云歌曲 ID 即可。', ...NOW_PLAYING }, null, 2);
+const galleryJson = JSON.stringify({ note: '相册。', albums: ALBUMS }, null, 2);
+---
+
+<BaseLayout title="后台" autoFocus>
+  <Hero eyebrow="Admin · local" title="后台管理" subtitle="在这里写好内容,一键生成文件,保存到项目里,重新构建就生效。全部在本机完成。" />
+
+  <div class="card mb-6 p-4 text-sm text-muted-foreground">
+    <p class="font-medium text-foreground">怎么用</p>
+    <ol id="howto-dev" class="mt-1 hidden list-decimal space-y-0.5 pl-5">
+      <li>在下面的表单里填内容,右侧会实时生成文件。</li>
+      <li>点「<b>保存到项目</b>」,文件会直接写进项目里,预览页面会自动刷新。</li>
+      <li>想发布时运行 <code class="rounded bg-muted px-1 py-0.5">npm run build</code> 或推到 GitHub。</li>
+    </ol>
+    <ol id="howto-static" class="mt-1 list-decimal space-y-0.5 pl-5">
+      <li>在下面的表单里填内容,右侧会实时生成文件。</li>
+      <li>点「下载」把文件存到提示的路径(会覆盖旧文件),或点「复制」粘贴进去。</li>
+      <li>运行 <code class="rounded bg-muted px-1 py-0.5">npm run build</code> 或 <code class="rounded bg-muted px-1 py-0.5">npm run build:local</code>。</li>
+    </ol>
+    <p id="mode-badge" class="mt-2 text-xs"></p>
+    <p class="mt-1 text-xs">这个页面不在导航里,只有知道地址 <code class="rounded bg-muted px-1 py-0.5">/admin/</code> 的人能打开。发布到网上时建议删掉 <code class="rounded bg-muted px-1 py-0.5">src/pages/admin.astro</code>。</p>
+  </div>
+
+  <div class="admin-tabs mb-6 flex flex-wrap gap-1 rounded-xl bg-muted p-1 text-sm">
+    <button data-tab="note" class="tab-btn rounded-lg px-4 py-1.5" aria-selected="true">写笔记</button>
+    <button data-tab="guest" class="tab-btn rounded-lg px-4 py-1.5">留言</button>
+    <button data-tab="music" class="tab-btn rounded-lg px-4 py-1.5">在听什么</button>
+    <button data-tab="gallery" class="tab-btn rounded-lg px-4 py-1.5">相册</button>
+    <button data-tab="overview" class="tab-btn rounded-lg px-4 py-1.5">总览</button>
+  </div>
+
+  {/* ── 写笔记 ─────────────────────────────────────────────────────────── */}
+  <section data-panel="note" class="admin-panel grid gap-6 lg:grid-cols-2">
+    <form id="note-form" class="card space-y-3 p-5" autocomplete="off">
+      <label class="block text-sm">标题<input name="title" required class="inp" placeholder="动态规划入门" /></label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block text-sm">日期<input name="date" type="date" value={today} class="inp" /></label>
+        <label class="block text-sm">分类<input name="category" class="inp" placeholder="算法" /></label>
+      </div>
+      <label class="block text-sm">标签(逗号分隔)<input name="tags" class="inp" placeholder="动态规划, 刷题" /></label>
+      <label class="block text-sm">摘要<input name="summary" class="inp" placeholder="一句话,显示在卡片上" /></label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block text-sm">置顶权重<input name="sticky" type="number" min="0" value="0" class="inp" /></label>
+        <label class="flex items-center gap-2 pt-6 text-sm"><input name="draft" type="checkbox" /> 草稿(不发布)</label>
+      </div>
+      <label class="block text-sm">正文(Markdown)<textarea name="body" rows="14" class="inp font-mono text-[13px]" placeholder="## 第一节&#10;&#10;正文……"></textarea></label>
+    </form>
+    <div class="card flex flex-col p-5">
+      <div class="mb-2 flex items-center justify-between gap-2">
+        <p class="text-xs text-muted-foreground">保存到 <code id="note-path" class="rounded bg-muted px-1 py-0.5">src/content/notes/…</code></p>
+        <div class="flex gap-2">
+          <button type="button" data-save="note-out" data-path-from="note-path" class="chip save-btn hidden">保存到项目</button>
+          <button type="button" data-copy="note-out" class="chip">复制</button>
+          <button type="button" data-download="note-out" data-filename-from="note-path" class="chip">下载</button>
+        </div>
+      </div>
+      <textarea id="note-out" readonly class="inp flex-1 font-mono text-[12px]" rows="24"></textarea>
+    </div>
+  </section>
+
+  {/* ── 留言 ───────────────────────────────────────────────────────────── */}
+  <section data-panel="guest" class="admin-panel hidden grid gap-6 lg:grid-cols-2">
+    <form id="guest-form" class="card space-y-3 p-5" autocomplete="off">
+      <label class="block text-sm">留言人<input name="name" class="inp" placeholder="谁说的" /></label>
+      <label class="block text-sm">内容<textarea name="message" rows="4" class="inp" placeholder="留言内容"></textarea></label>
+      <label class="block text-sm">日期<input name="date" type="date" value={today} class="inp" /></label>
+      <button type="button" id="guest-add" class="chip">添加到列表 ↓</button>
+      <p class="text-xs text-muted-foreground">适合把微信、邮件里收到的留言抄进来。在线留言请配置 Giscus。</p>
+    </form>
+    <div class="card flex flex-col p-5">
+      <div class="mb-2 flex items-center justify-between gap-2">
+        <p class="text-xs text-muted-foreground">保存到 <code class="rounded bg-muted px-1 py-0.5">src/data/guestbook.json</code></p>
+        <div class="flex gap-2">
+          <button type="button" data-save="guest-out" data-path="src/data/guestbook.json" class="chip save-btn hidden">保存到项目</button>
+          <button type="button" data-copy="guest-out" class="chip">复制</button>
+          <button type="button" data-download="guest-out" data-filename="guestbook.json" class="chip">下载</button>
+        </div>
+      </div>
+      <textarea id="guest-out" class="inp flex-1 font-mono text-[12px]" rows="24">{guestbookJson}</textarea>
+    </div>
+  </section>
+
+  {/* ── 在听什么 ───────────────────────────────────────────────────────── */}
+  <section data-panel="music" class="admin-panel hidden grid gap-6 lg:grid-cols-2">
+    <div class="card space-y-4 p-5">
+      <div>
+        <p class="mb-2 text-sm font-medium">正在听</p>
+        <div class="space-y-2">
+          <input id="np-link" class="inp" placeholder="粘贴网易云链接,如 https://music.163.com/song?id=1234567" />
+          <div class="grid grid-cols-2 gap-2">
+            <input id="np-title" class="inp" placeholder="歌名" />
+            <input id="np-artist" class="inp" placeholder="歌手" />
+          </div>
+          <button type="button" id="np-set" class="chip">设为正在听</button>
+        </div>
+      </div>
+      <hr class="border-border" />
+      <div>
+        <p class="mb-2 text-sm font-medium">新建歌单</p>
+        <div class="space-y-2">
+          <input id="pl-title" class="inp" placeholder="歌单名,如:专注学习" />
+          <input id="pl-desc" class="inp" placeholder="一句描述(可选)" />
+          <input id="pl-link" class="inp" placeholder="网易云歌单链接(有的话整单可播)" />
+          <button type="button" id="pl-add" class="chip">添加歌单</button>
+        </div>
+      </div>
+      <p class="text-xs text-muted-foreground">
+        从网易云「分享 → 复制链接」粘贴即可,脚本会自动提取 ID。不需要账号或密钥。
+      </p>
+    </div>
+    <div class="card flex flex-col p-5">
+      <div class="mb-2 flex items-center justify-between gap-2">
+        <p class="text-xs text-muted-foreground">保存到 <code class="rounded bg-muted px-1 py-0.5">src/data/now-playing.json</code></p>
+        <div class="flex gap-2">
+          <button type="button" data-save="music-out" data-path="src/data/now-playing.json" class="chip save-btn hidden">保存到项目</button>
+          <button type="button" data-copy="music-out" class="chip">复制</button>
+          <button type="button" data-download="music-out" data-filename="now-playing.json" class="chip">下载</button>
+        </div>
+      </div>
+      <textarea id="music-out" class="inp flex-1 font-mono text-[12px]" rows="24">{nowPlayingJson}</textarea>
+    </div>
+  </section>
+
+  {/* ── 相册 ───────────────────────────────────────────────────────────── */}
+  <section data-panel="gallery" class="admin-panel hidden grid gap-6 lg:grid-cols-2">
+    <div class="card space-y-3 p-5">
+      <p class="text-sm font-medium">新建相册</p>
+      <input id="al-title" class="inp" placeholder="相册名" />
+      <input id="al-desc" class="inp" placeholder="描述(可选)" />
+      <input id="al-date" type="date" value={today} class="inp" />
+      <input id="al-folder" class="inp" placeholder="图片所在文件夹名,如 campus(对应 public/gallery/campus/)" />
+      <textarea id="al-files" rows="5" class="inp font-mono text-[13px]" placeholder="每行一张:文件名 | 说明&#10;01.jpg | 图书馆西侧&#10;02.jpg | 操场的树"></textarea>
+      <button type="button" id="al-add" class="chip">添加相册</button>
+      <p class="text-xs text-muted-foreground">先把照片放进 <code>public/gallery/文件夹名/</code>,再在这里登记。建议先压缩到 1600px 宽以内。</p>
+    </div>
+    <div class="card flex flex-col p-5">
+      <div class="mb-2 flex items-center justify-between gap-2">
+        <p class="text-xs text-muted-foreground">保存到 <code class="rounded bg-muted px-1 py-0.5">src/data/gallery.json</code></p>
+        <div class="flex gap-2">
+          <button type="button" data-save="gallery-out" data-path="src/data/gallery.json" class="chip save-btn hidden">保存到项目</button>
+          <button type="button" data-copy="gallery-out" class="chip">复制</button>
+          <button type="button" data-download="gallery-out" data-filename="gallery.json" class="chip">下载</button>
+        </div>
+      </div>
+      <textarea id="gallery-out" class="inp flex-1 font-mono text-[12px]" rows="24">{galleryJson}</textarea>
+    </div>
+  </section>
+
+  {/* ── 总览 ───────────────────────────────────────────────────────────── */}
+  <section data-panel="overview" class="admin-panel hidden">
+    <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {[
+        ['笔记', notes.length],
+        ['留言', GUESTBOOK_ENTRIES.length],
+        ['歌单', (NOW_PLAYING.playlists || []).length],
+        ['相册', ALBUMS.length],
+      ].map(([k, v]) => (
+        <div class="card p-5">
+          <p class="text-xs text-muted-foreground">{k}</p>
+          <p class="gradient-text mt-1 text-3xl font-semibold">{v}</p>
+        </div>
+      ))}
+    </div>
+    <div class="card divide-y divide-border">
+      {notes.map((n) => (
+        <div class="flex items-center gap-3 px-5 py-3 text-sm">
+          <time class="w-24 shrink-0 font-mono text-xs text-muted-foreground">{formatDate(n.data.date)}</time>
+          <a href={withBase(`/notes/${n.id}/`)} class="line-clamp-1 flex-1 hover:text-primary">{n.data.title}</a>
+          <span class="text-xs text-muted-foreground">{n.data.category}</span>
+          {n.data.draft && <span class="chip">草稿</span>}
+          {n.data.sticky > 0 && <span class="chip">置顶</span>}
+          <code class="hidden text-[11px] text-muted-foreground lg:inline">src/content/notes/{n.id}.md</code>
+        </div>
+      ))}
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .inp {
+    display: block;
+    width: 100%;
+    margin-top: 0.3rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 0.875rem;
+    outline: none;
+  }
+  .inp:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+  .tab-btn[aria-selected="true"] {
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  .tab-btn { color: var(--muted-foreground); }
+</style>
+
+<script>
+  /* ── tabs ──────────────────────────────────────────────────────────── */
+  const tabs = document.querySelectorAll<HTMLButtonElement>('.tab-btn');
+  const panels = document.querySelectorAll<HTMLElement>('.admin-panel');
+  function showTab(id: string) {
+    tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === id)));
+    panels.forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== id));
+    location.hash = id;
+  }
+  tabs.forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab!)));
+  showTab(location.hash.slice(1) || 'note');
+
+  /* ── direct save (dev server only) ─────────────────────────────────── */
+  // `npm run dev` mounts a tiny writer at /__dev/write. If it answers, show the
+  // "保存到项目" buttons; otherwise (hosted static site) stay in download mode.
+  const WRITE_URL = '/__dev/write';
+  (async () => {
+    let dev = false;
+    try {
+      const r = await fetch(WRITE_URL, { method: 'GET' });
+      dev = r.ok;
+    } catch {}
+    document.querySelectorAll('.save-btn').forEach((b) => b.classList.toggle('hidden', !dev));
+    document.getElementById('howto-dev')?.classList.toggle('hidden', !dev);
+    document.getElementById('howto-static')?.classList.toggle('hidden', dev);
+    const badge = document.getElementById('mode-badge');
+    if (badge) badge.textContent = dev ? '● 本地开发模式:可以直接保存到项目。' : '○ 静态模式:请用下载/复制。';
+  })();
+
+  async function saveToProject(btn: HTMLButtonElement) {
+    const ta = document.getElementById(btn.dataset.save!) as HTMLTextAreaElement;
+    let path = btn.dataset.path || '';
+    if (btn.dataset.pathFrom) path = document.getElementById(btn.dataset.pathFrom)!.textContent || '';
+    if (!path || path.includes('…')) return alert('请先填标题。');
+    const isNote = path.startsWith('src/content/notes/');
+    const old = btn.textContent;
+    btn.textContent = '保存中…';
+    btn.disabled = true;
+    try {
+      let r = await fetch(WRITE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, content: ta.value, overwrite: !isNote }),
+      });
+      if (r.status === 409) {
+        if (!confirm(`${path} 已存在,要覆盖吗?`)) throw new Error('cancelled');
+        r = await fetch(WRITE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path, content: ta.value, overwrite: true }),
+        });
+      }
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || '保存失败');
+      btn.textContent = '已保存 ✓';
+      if (isNote) {
+        const slug = path.replace(/^src\/content\/notes\//, '').replace(/\.md$/, '');
+        setTimeout(() => {
+          if (confirm('已保存。现在打开这篇笔记看看?')) location.href = `/notes/${slug}/`;
+        }, 200);
+      }
+    } catch (e: any) {
+      if (e?.message !== 'cancelled') alert('保存失败:' + (e?.message || e));
+      btn.textContent = old;
+    } finally {
+      btn.disabled = false;
+      setTimeout(() => (btn.textContent = old), 2000);
+    }
+  }
+  document.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) => b.addEventListener('click', () => saveToProject(b)));
+
+  /* ── copy / download ───────────────────────────────────────────────── */
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const ta = document.getElementById(b.dataset.copy!) as HTMLTextAreaElement;
+      try {
+        await navigator.clipboard.writeText(ta.value);
+        const old = b.textContent;
+        b.textContent = '已复制';
+        setTimeout(() => (b.textContent = old), 1200);
+      } catch {
+        ta.select();
+        alert('已选中文本,请按 Ctrl+C 复制。');
+      }
+    }),
+  );
+  document.querySelectorAll<HTMLButtonElement>('[data-download]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const ta = document.getElementById(b.dataset.download!) as HTMLTextAreaElement;
+      let name = b.dataset.filename || 'file.txt';
+      if (b.dataset.filenameFrom) {
+        const p = document.getElementById(b.dataset.filenameFrom)!.textContent || '';
+        name = p.split('/').pop() || name;
+      }
+      const blob = new Blob([ta.value], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }),
+  );
+
+  /* ── helpers ───────────────────────────────────────────────────────── */
+  const q = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const safeName = (s: string) => s.replace(/[\\/:*?"<>|\s]+/g, '-').replace(/^-+|-+$/g, '');
+  function readJson(id: string): any {
+    try {
+      return JSON.parse(q<HTMLTextAreaElement>(id).value);
+    } catch {
+      alert('右侧 JSON 格式有误,请先修正再添加。');
+      return null;
+    }
+  }
+  function writeJson(id: string, obj: any) {
+    q<HTMLTextAreaElement>(id).value = JSON.stringify(obj, null, 2);
+  }
+  /** Extract a NetEase id + kind from a share link, a raw id, or a netease: URI. */
+  function neteaseId(link: string): { kind: 'song' | 'playlist'; id: string } | null {
+    const s = link.trim();
+    const m = s.match(/music\.163\.com\/(?:#\/)?(song|playlist|album)\?[^#]*\bid=(\d+)/);
+    if (m) return { kind: m[1] === 'song' ? 'song' : 'playlist', id: m[2] };
+    const q = s.match(/[?&]id=(\d+)/);
+    if (q) return { kind: /playlist/.test(s) ? 'playlist' : 'song', id: q[1] };
+    if (/^\d{4,}$/.test(s)) return { kind: 'song', id: s };
+    return null;
+  }
+
+  /* ── note ──────────────────────────────────────────────────────────── */
+  const noteForm = q<HTMLFormElement>('note-form');
+  function renderNote() {
+    const f = new FormData(noteForm);
+    const title = String(f.get('title') || '').trim();
+    const date = String(f.get('date') || '');
+    const category = String(f.get('category') || '').trim() || '未分类';
+    const tags = String(f.get('tags') || '')
+      .split(/[,，]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const summary = String(f.get('summary') || '').trim();
+    const sticky = Number(f.get('sticky') || 0);
+    const draft = f.get('draft') === 'on';
+    const body = String(f.get('body') || '');
+    const fm = [
+      '---',
+      `title: ${title}`,
+      `date: ${date}`,
+      `category: ${category}`,
+      `tags: [${tags.join(', ')}]`,
+      summary ? `summary: ${summary}` : null,
+      `sticky: ${sticky}`,
+      `draft: ${draft}`,
+      '---',
+      '',
+      body,
+      '',
+    ]
+      .filter((l) => l !== null)
+      .join('\n');
+    q('note-out').textContent = '';
+    q<HTMLTextAreaElement>('note-out').value = fm;
+    q('note-path').textContent = `src/content/notes/${date}-${safeName(title) || '标题'}.md`;
+  }
+  noteForm.addEventListener('input', renderNote);
+  renderNote();
+
+  /* ── guest ─────────────────────────────────────────────────────────── */
+  q('guest-add').addEventListener('click', () => {
+    const f = new FormData(q<HTMLFormElement>('guest-form'));
+    const name = String(f.get('name') || '').trim();
+    const message = String(f.get('message') || '').trim();
+    if (!name || !message) return alert('留言人和内容都要填。');
+    const data = readJson('guest-out');
+    if (!data) return;
+    data.entries = data.entries || [];
+    data.entries.unshift({ name, message, date: String(f.get('date') || '') });
+    writeJson('guest-out', data);
+    (q<HTMLFormElement>('guest-form').elements.namedItem('message') as HTMLTextAreaElement).value = '';
+  });
+
+  /* ── music ─────────────────────────────────────────────────────────── */
+  q('np-set').addEventListener('click', () => {
+    const s = neteaseId(q<HTMLInputElement>('np-link').value);
+    if (!s) return alert('没识别出网易云 ID,请粘贴完整链接或直接填数字 ID。');
+    const data = readJson('music-out');
+    if (!data) return;
+    data.nowPlaying = {
+      title: q<HTMLInputElement>('np-title').value.trim(),
+      artist: q<HTMLInputElement>('np-artist').value.trim(),
+      neteaseId: s.id,
+    };
+    writeJson('music-out', data);
+  });
+  q('pl-add').addEventListener('click', () => {
+    const title = q<HTMLInputElement>('pl-title').value.trim();
+    if (!title) return alert('歌单名必填。');
+    const link = q<HTMLInputElement>('pl-link').value.trim();
+    const s = link ? neteaseId(link) : null;
+    if (link && !s) return alert('歌单链接没识别出 ID。');
+    const data = readJson('music-out');
+    if (!data) return;
+    data.playlists = data.playlists || [];
+    data.playlists.push({
+      title,
+      description: q<HTMLInputElement>('pl-desc').value.trim() || undefined,
+      neteaseId: s ? s.id : '',
+      tracks: [],
+    });
+    writeJson('music-out', data);
+    q<HTMLInputElement>('pl-title').value = '';
+    q<HTMLInputElement>('pl-desc').value = '';
+    q<HTMLInputElement>('pl-link').value = '';
+  });
+
+  /* ── gallery ───────────────────────────────────────────────────────── */
+  q('al-add').addEventListener('click', () => {
+    const title = q<HTMLInputElement>('al-title').value.trim();
+    const folder = q<HTMLInputElement>('al-folder').value.trim();
+    if (!title || !folder) return alert('相册名和文件夹名都要填。');
+    const photos = q<HTMLTextAreaElement>('al-files')
+      .value.split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => {
+        const [file, ...cap] = l.split('|');
+        return { src: `/gallery/${folder}/${file.trim()}`, caption: cap.join('|').trim() || undefined };
+      });
+    if (!photos.length) return alert('至少登记一张照片。');
+    const data = readJson('gallery-out');
+    if (!data) return;
+    data.albums = data.albums || [];
+    data.albums.unshift({
+      title,
+      date: q<HTMLInputElement>('al-date').value,
+      description: q<HTMLInputElement>('al-desc').value.trim() || undefined,
+      photos,
+    });
+    writeJson('gallery-out', data);
+    q<HTMLInputElement>('al-title').value = '';
+    q<HTMLTextAreaElement>('al-files').value = '';
+  });
+</script>

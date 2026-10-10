@@ -1,0 +1,12 @@
+---
+import { withBase } from '../lib/url';
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="页面不存在">
+  <div class="flex min-h-[50vh] flex-col items-center justify-center text-center">
+    <p class="gradient-text text-7xl font-bold">404</p>
+    <p class="mt-3 text-muted-foreground">这个页面不存在,或者已经被移走了。</p>
+    <a href={withBase("/")} class="chip mt-6">← 回到首页</a>
+  </div>
+</BaseLayout>

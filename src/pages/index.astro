@@ -1,0 +1,50 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import PostCard from '../components/PostCard.astro';
+import Turntable from '../components/Turntable.astro';
+import FocusToday from '../components/FocusToday.astro';
+import TagsCloudCard from '../components/TagsCloudCard.astro';
+import CategoriesCard from '../components/CategoriesCard.astro';
+import RecentPostsCard from '../components/RecentPostsCard.astro';
+import Pagination from '../components/Pagination.astro';
+import { getNotes, getTags, getCategories } from '../lib/content';
+import { SITE } from '../lib/site';
+
+const notes = await getNotes();
+const tags = getTags(notes);
+const categories = getCategories(notes);
+const page = notes.slice(0, SITE.postsPerPage);
+const total = Math.max(1, Math.ceil(notes.length / SITE.postsPerPage));
+---
+
+<BaseLayout>
+  <Hero />
+
+  <div class="mb-10">
+    <Turntable />
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <section class="space-y-5">
+      <FocusToday />
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">最新笔记</h2>
+        <button type="button" class="wn-open-alias chip hidden items-center gap-1 text-xs">✎ 写一篇</button>
+      </div>
+      {page.length === 0 && (
+        <div class="card p-8 text-center text-muted-foreground">
+          还没有笔记。运行 <code class="rounded bg-muted px-1.5 py-0.5">npm run new "标题"</code> 新建一篇。
+        </div>
+      )}
+      {page.map((n, i) => <PostCard note={n} index={i} />)}
+      <Pagination current={1} total={total} href={(p) => (p === 1 ? '/' : `/page/${p}/`)} />
+    </section>
+
+    <aside class="space-y-5 lg:sticky lg:top-20 lg:self-start">
+      <RecentPostsCard notes={notes} />
+      <CategoriesCard categories={categories} />
+      <TagsCloudCard tags={tags} />
+    </aside>
+  </div>
+</BaseLayout>

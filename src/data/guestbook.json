@@ -1,0 +1,10 @@
+{
+  "note": "留言板。这里的条目会直接显示;想让大家在线留言,请在 src/data/interactions.json 里把 guestbook.provider 设成 giscus。",
+  "entries": [
+    {
+      "name": "示例访客",
+      "message": "笔记整理得很清楚,谢谢分享!",
+      "date": "2026-10-06"
+    }
+  ]
+}

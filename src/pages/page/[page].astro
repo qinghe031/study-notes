@@ -1,0 +1,43 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../../components/Hero.astro';
+import PostCard from '../../components/PostCard.astro';
+import TagsCloudCard from '../../components/TagsCloudCard.astro';
+import CategoriesCard from '../../components/CategoriesCard.astro';
+import RecentPostsCard from '../../components/RecentPostsCard.astro';
+import Pagination from '../../components/Pagination.astro';
+import { getNotes, getTags, getCategories } from '../../lib/content';
+import { SITE } from '../../lib/site';
+
+export async function getStaticPaths() {
+  const notes = await getNotes();
+  const total = Math.ceil(notes.length / SITE.postsPerPage);
+  // Page 1 lives at `/`; only emit /page/2/ onward.
+  return Array.from({ length: Math.max(0, total - 1) }, (_, i) => ({
+    params: { page: String(i + 2) },
+  }));
+}
+
+const current = Number(Astro.params.page);
+const notes = await getNotes();
+const tags = getTags(notes);
+const categories = getCategories(notes);
+const total = Math.ceil(notes.length / SITE.postsPerPage);
+const start = (current - 1) * SITE.postsPerPage;
+const page = notes.slice(start, start + SITE.postsPerPage);
+---
+
+<BaseLayout title={`第 ${current} 页`}>
+  <Hero eyebrow={`第 ${current} / ${total} 页`} />
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <section class="space-y-5">
+      {page.map((n, i) => <PostCard note={n} index={i} />)}
+      <Pagination current={current} total={total} href={(p) => (p === 1 ? '/' : `/page/${p}/`)} />
+    </section>
+    <aside class="space-y-5 lg:sticky lg:top-20 lg:self-start">
+      <RecentPostsCard notes={notes} />
+      <CategoriesCard categories={categories} />
+      <TagsCloudCard tags={tags} />
+    </aside>
+  </div>
+</BaseLayout>

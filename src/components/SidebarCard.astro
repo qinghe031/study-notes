@@ -1,0 +1,17 @@
+---
+import { withBase } from '../lib/url';
+interface Props {
+  title: string;
+  href?: string;
+  class?: string;
+}
+const { title, href, class: cls } = Astro.props;
+---
+
+<section class:list={['card p-4', cls]}>
+  <header class="mb-3 flex items-center justify-between">
+    <h3 class="text-sm font-semibold tracking-wide">{title}</h3>
+    {href && <a href={withBase(href)} class="text-xs text-muted-foreground hover:text-primary">全部 →</a>}
+  </header>
+  <slot />
+</section>

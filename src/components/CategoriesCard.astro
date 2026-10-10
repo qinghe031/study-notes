@@ -1,0 +1,28 @@
+---
+import { withBase } from '../lib/url';
+import SidebarCard from './SidebarCard.astro';
+import type { Bucket } from '../lib/content';
+
+interface Props {
+  categories: Bucket[];
+}
+const { categories } = Astro.props;
+---
+
+<SidebarCard title="分类" href="/category/">
+  <ul class="space-y-1">
+    {
+      categories.map((c) => (
+        <li>
+          <a
+            href={withBase(`/category/${c.slug}/`)}
+            class="flex items-center justify-between rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <span>{c.name}</span>
+            <span class="text-xs opacity-60">{c.count}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</SidebarCard>

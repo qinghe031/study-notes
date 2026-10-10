@@ -1,0 +1,319 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ═══ Theme system ═══════════════════════════════════════════════════════════
+   Sky: Children of the Light inspired palette — soft, low-saturation, healing.
+   Two orthogonal axes:
+   • MODE — light / dark, via the `.dark` class on <html> (persisted)
+   • HUE  — 8 sky hues, via the `data-site-theme` attribute on <html>
+   Base (:root / .dark) == the `sky` hue (soft cloud blue), so first paint is
+   correct before the inline head script runs.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  color-scheme: light;
+  --radius: 1rem;
+  --site-shell-max: 90rem;
+  --site-shell-narrow-max: 72rem;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+/* ── sky 云蓝 (base / default) — dawn cream paper, soft sky-blue accent ── */
+:root, .light {
+  --background: #f6f4ef;
+  --foreground: #3f4854;
+  --card: #fdfcf8;
+  --card-foreground: #3f4854;
+  --muted: #ebe8e0;
+  --muted-foreground: #7d838c;
+  --border: rgba(63, 72, 84, 0.10);
+  --primary: #6f9bbf;
+  --primary-foreground: #f5f9fc;
+  --ring: #6f9bbf;
+  --gradient-primary: linear-gradient(135deg, #7fa8c9, #b4cfe4);
+  --blob-color-1: rgba(127, 168, 201, 0.16);
+  --blob-color-2: rgba(196, 180, 212, 0.13);
+}
+
+.dark {
+  --background: #1b222c;
+  --foreground: #e7e5e0;
+  --card: #242c38;
+  --card-foreground: #e7e5e0;
+  --muted: #2c3541;
+  --muted-foreground: #9aa3ad;
+  --border: rgba(231, 229, 224, 0.09);
+  --primary: #9dc0dd;
+  --primary-foreground: #1a2634;
+  --ring: #9dc0dd;
+  --gradient-primary: linear-gradient(135deg, #9dc0dd, #c4dcee);
+  --blob-color-1: rgba(157, 192, 221, 0.14);
+  --blob-color-2: rgba(196, 180, 212, 0.10);
+}
+
+/* ── dawn 晨金 ── */
+[data-site-theme="dawn"] {
+  --primary: #bf9d66;
+  --primary-foreground: #fdf9f0;
+  --ring: #bf9d66;
+  --gradient-primary: linear-gradient(135deg, #c9a870, #e6d0a0);
+}
+.dark[data-site-theme="dawn"] {
+  --primary: #d8bc88;
+  --primary-foreground: #2c2415;
+  --ring: #d8bc88;
+  --gradient-primary: linear-gradient(135deg, #d8bc88, #ecd9b4);
+}
+
+/* ── lavender 暮紫 ── */
+[data-site-theme="lavender"] {
+  --primary: #978cba;
+  --primary-foreground: #faf8fd;
+  --ring: #978cba;
+  --gradient-primary: linear-gradient(135deg, #a99fcb, #cabfe0);
+}
+.dark[data-site-theme="lavender"] {
+  --primary: #b6abda;
+  --primary-foreground: #241f33;
+  --ring: #b6abda;
+  --gradient-primary: linear-gradient(135deg, #b6abda, #d3c9ec);
+}
+
+/* ── meadow 草甸 ── */
+[data-site-theme="meadow"] {
+  --primary: #87a884;
+  --primary-foreground: #f7fbf5;
+  --ring: #87a884;
+  --gradient-primary: linear-gradient(135deg, #93b490, #bcd6b8);
+}
+.dark[data-site-theme="meadow"] {
+  --primary: #a6c6a2;
+  --primary-foreground: #1e2a1c;
+  --ring: #a6c6a2;
+  --gradient-primary: linear-gradient(135deg, #a6c6a2, #c8e0c4);
+}
+
+/* ── blossom 霞粉 ── */
+[data-site-theme="blossom"] {
+  --primary: #cc99a5;
+  --primary-foreground: #fdf7f8;
+  --ring: #cc99a5;
+  --gradient-primary: linear-gradient(135deg, #d6a5b0, #ebc6cd);
+}
+.dark[data-site-theme="blossom"] {
+  --primary: #e0b2bd;
+  --primary-foreground: #2c1e22;
+  --ring: #e0b2bd;
+  --gradient-primary: linear-gradient(135deg, #e0b2bd, #f0cfd6);
+}
+
+/* ── lagoon 湖青 ── */
+[data-site-theme="lagoon"] {
+  --primary: #77a5a3;
+  --primary-foreground: #f5fbfa;
+  --ring: #77a5a3;
+  --gradient-primary: linear-gradient(135deg, #85b3b1, #b2d3d1);
+}
+.dark[data-site-theme="lagoon"] {
+  --primary: #9cc4c2;
+  --primary-foreground: #1a2a29;
+  --ring: #9cc4c2;
+  --gradient-primary: linear-gradient(135deg, #9cc4c2, #c2dedc);
+}
+
+/* ── peach 暖橘 ── */
+[data-site-theme="peach"] {
+  --primary: #cc9873;
+  --primary-foreground: #fdf8f4;
+  --ring: #cc9873;
+  --gradient-primary: linear-gradient(135deg, #d6a680, #ecc9ab);
+}
+.dark[data-site-theme="peach"] {
+  --primary: #dfb190;
+  --primary-foreground: #2c1f14;
+  --ring: #dfb190;
+  --gradient-primary: linear-gradient(135deg, #dfb190, #efd0b6);
+}
+
+/* ── mist 雾灰 ── */
+[data-site-theme="mist"] {
+  --primary: #878d96;
+  --primary-foreground: #f8f9fa;
+  --ring: #878d96;
+  --gradient-primary: linear-gradient(135deg, #939aa3, #bcc2ca);
+}
+.dark[data-site-theme="mist"] {
+  --primary: #a6acb5;
+  --primary-foreground: #1f2226;
+  --ring: #a6acb5;
+  --gradient-primary: linear-gradient(135deg, #a6acb5, #c8cdd4);
+}
+
+/* ═══ Tailwind theme bridge ═══════════════════════════════════════════════════ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring: var(--ring);
+  --radius-card: var(--radius);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    monospace;
+}
+
+/* ═══ Base ═══════════════════════════════════════════════════════════════════ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    position: relative;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    /* Dawn-light wash: soft accent blobs over warm paper, like a Sky horizon. */
+    background-image:
+      radial-gradient(ellipse 80% 60% at 15% 0%, var(--blob-color-1) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 55% at 88% 4%, var(--blob-color-2) 0%, transparent 50%),
+      radial-gradient(ellipse 90% 50% at 50% 100%, var(--blob-color-1) 0%, transparent 60%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 35%, transparent);
+    color: var(--foreground);
+  }
+}
+
+/* ═══ Components ═════════════════════════════════════════════════════════════ */
+@layer components {
+  .card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 2px rgba(63, 72, 84, 0.03), 0 6px 20px -14px rgba(63, 72, 84, 0.18);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(63, 72, 84, 0.05), 0 18px 40px -18px color-mix(in srgb, var(--primary) 45%, rgba(63, 72, 84, 0.35));
+    border-color: color-mix(in srgb, var(--primary) 38%, var(--border));
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.18rem 0.65rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    border-radius: 9999px;
+    background-color: var(--muted);
+    color: var(--muted-foreground);
+    border: 1px solid transparent;
+    transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+  }
+  .chip:hover {
+    color: var(--primary);
+    background-color: color-mix(in srgb, var(--primary) 12%, var(--muted));
+    border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  }
+
+  .shell {
+    width: 100%;
+    max-width: var(--site-shell-max);
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* ═══ Article prose tuning ═══════════════════════════════════════════════════ */
+.prose {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-links: var(--primary);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-quotes: var(--muted-foreground);
+  --tw-prose-quote-borders: var(--primary);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-hr: var(--border);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+}
+
+.prose :where(code):not(:where(pre code)) {
+  background: var(--muted);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.4rem;
+  font-weight: 500;
+}
+.prose :where(code):not(:where(pre code))::before,
+.prose :where(code):not(:where(pre code))::after {
+  content: "";
+}
+
+/* Shiki dual-theme code blocks */
+.prose pre {
+  background: var(--muted) !important;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+html.dark .prose pre,
+html.dark .prose pre span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+/* Heading anchors */
+.heading-anchor {
+  color: inherit;
+  text-decoration: none;
+}
+.prose :where(h2, h3, h4):hover .heading-anchor::after {
+  content: " #";
+  color: var(--primary);
+  opacity: 0.5;
+}
+
+/* ═══ Motion ═════════════════════════════════════════════════════════════════ */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0;
+}
+.reveal.is-visible {
+  animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; animation: none; }
+  html { scroll-behavior: auto; }
+}

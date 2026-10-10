@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import { SITE } from '../lib/site';
+const { social } = SITE;
+const links = [
+  social.github && { label: 'GitHub', href: social.github },
+  social.bilibili && { label: 'Bilibili', href: social.bilibili },
+  social.email && { label: '邮件', href: `mailto:${social.email}` },
+].filter(Boolean) as { label: string; href: string }[];
+---
+
+<BaseLayout title="关于">
+  <Hero eyebrow="About" title="关于本站" subtitle={SITE.description} />
+  <div class="card prose prose-neutral max-w-none p-6 dark:prose-invert md:p-10">
+    <p>这里是我整理学习经验与笔记的地方。所有内容都在本地用 Markdown 编写,构建成静态页面后分享。</p>
+    <h2>有什么</h2>
+    <ul>
+      <li><strong>笔记</strong> — 首页文章流,按分类、标签、年份归档,全文搜索。</li>
+      <li><strong>生活相册</strong> — 偶尔拍的照片。</li>
+      <li><strong>在听什么</strong> — 首页的唱片机,点一下就能放;也有歌单页。</li>
+      <li><strong>留言板</strong> — 路过留句话。</li>
+    </ul>
+    <h2>它是怎么工作的</h2>
+    <ul>
+      <li>笔记放在 <code>src/content/notes/</code>,其他模块的内容在 <code>src/data/*.json</code>。</li>
+      <li><code>npm run build</code> 生成可发布的静态站点;<code>npm run build:local</code> 生成可以直接双击打开的离线版本。</li>
+      <li>没有数据库、没有账号、没有服务器。评论与在线留言可按需接入免费的 Giscus。</li>
+    </ul>
+    {
+      links.length > 0 && (
+        <>
+          <h2>联系</h2>
+          <p>
+            {links.map((l, i) => (
+              <>
+                <a href={l.href} target="_blank" rel="noopener">{l.label}</a>
+                {i < links.length - 1 && ' · '}
+              </>
+            ))}
+          </p>
+        </>
+      )
+    }
+    <p>想了解怎么写、怎么发布,请看首页置顶的「使用说明」。</p>
+  </div>
+</BaseLayout>

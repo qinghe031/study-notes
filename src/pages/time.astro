@@ -1,0 +1,231 @@
+---
+// 「浪费时间」— all-time focus total, a daily column chart, and the full history.
+// Everything is read from localStorage on the client; the page itself is static.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+---
+
+<BaseLayout title="浪费时间">
+  <Hero eyebrow="Time log" title="浪费时间" subtitle="花在阅读与写作上的每一分钟——数据只存在你自己的浏览器里。" />
+
+  {/* ── stat tiles ── */}
+  <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="card p-5">
+      <p class="text-xs text-muted-foreground">累计沉浸</p>
+      <p id="t-total" class="mt-1 text-3xl font-semibold">0m</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-xs text-muted-foreground">今日</p>
+      <p id="t-today" class="mt-1 text-3xl font-semibold">0m</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-xs text-muted-foreground">连续天数</p>
+      <p id="t-streak" class="mt-1 text-3xl font-semibold">0</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-xs text-muted-foreground">有记录的日子</p>
+      <p id="t-days" class="mt-1 text-3xl font-semibold">0</p>
+    </div>
+  </div>
+
+  {/* ── chart ── */}
+  <section class="card mb-6 p-5">
+    <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-base font-semibold">每日沉浸时长</h2>
+        <p class="text-xs text-muted-foreground">单位:分钟 · 悬停查看具体数值</p>
+      </div>
+      <div class="flex gap-1 rounded-lg bg-muted p-1 text-xs" role="tablist" aria-label="时间范围">
+        <button data-range="7" class="range-btn rounded-md px-3 py-1" role="tab">7 天</button>
+        <button data-range="30" class="range-btn rounded-md px-3 py-1" role="tab" aria-selected="true">30 天</button>
+        <button data-range="90" class="range-btn rounded-md px-3 py-1" role="tab">90 天</button>
+      </div>
+    </header>
+
+    <div class="relative">
+      <svg id="t-chart" viewBox="0 0 800 260" class="h-auto w-full" role="img" aria-labelledby="t-chart-title">
+        <title id="t-chart-title">每日沉浸时长柱状图</title>
+      </svg>
+      <div id="t-tip" class="card pointer-events-none absolute hidden px-2.5 py-1.5 text-xs shadow-lg" role="tooltip"></div>
+    </div>
+    <p id="t-empty" class="hidden py-10 text-center text-sm text-muted-foreground">
+      还没有记录。打开任意一篇笔记,左下角的时钟就会开始计时。
+    </p>
+  </section>
+
+  {/* ── table view ── */}
+  <section class="card p-5">
+    <header class="mb-3 flex items-center justify-between">
+      <h2 class="text-base font-semibold">历史记录</h2>
+      <div class="flex gap-2">
+        <button id="t-export" class="chip">导出 JSON</button>
+        <button id="t-clear" class="chip">清空</button>
+      </div>
+    </header>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-muted-foreground">
+          <tr class="border-b border-border">
+            <th class="py-2 text-left font-medium">日期</th>
+            <th class="py-2 text-right font-medium">时长</th>
+            <th class="py-2 text-right font-medium">分钟</th>
+          </tr>
+        </thead>
+        <tbody id="t-rows"></tbody>
+      </table>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .range-btn { color: var(--muted-foreground); }
+  .range-btn[aria-selected="true"] {
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  .bar { transition: opacity 0.15s ease; }
+  .bar.dim { opacity: 0.35; }
+</style>
+
+<script>
+  import { load, save, fmt, fmtClock, todaySeconds, totalSeconds, streak, lastDays, FOCUS_EVENT, FOCUS_KEY } from '../lib/focus';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const svg = $('t-chart') as unknown as SVGSVGElement;
+  const tip = $('t-tip');
+  const NS = 'http://www.w3.org/2000/svg';
+  let range = 30;
+
+  function el(name: string, attrs: Record<string, string | number> = {}, text?: string) {
+    const n = document.createElementNS(NS, name);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v));
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function renderStats() {
+    $('t-total').textContent = fmt(totalSeconds());
+    $('t-today').textContent = fmt(todaySeconds());
+    $('t-streak').textContent = String(streak());
+    $('t-days').textContent = String(Object.values(load().days).filter((s) => s > 0).length);
+  }
+
+  function renderChart() {
+    while (svg.childNodes.length > 1) svg.removeChild(svg.lastChild!);
+    const data = lastDays(range).map((d) => ({ ...d, min: d.seconds / 60 }));
+    const any = data.some((d) => d.seconds > 0);
+    $('t-empty').classList.toggle('hidden', any);
+    svg.classList.toggle('hidden', !any);
+    if (!any) return;
+
+    const W = 800, H = 260, padL = 40, padR = 12, padT = 20, padB = 32;
+    const iw = W - padL - padR, ih = H - padT - padB;
+    const maxRaw = Math.max(...data.map((d) => d.min), 1);
+    // Clean tick ceiling: 10/20/30/60/90/120/180/240…
+    const steps = [10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 300, 360, 480, 600];
+    const maxV = steps.find((s) => s >= maxRaw) || Math.ceil(maxRaw / 60) * 60;
+    const ticks = 4;
+    const y = (v: number) => padT + ih - (v / maxV) * ih;
+    const band = iw / data.length;
+    const bw = Math.min(24, band * 0.6);
+
+    // gridlines + y labels
+    for (let i = 0; i <= ticks; i++) {
+      const v = (maxV / ticks) * i;
+      const yy = y(v);
+      svg.appendChild(el('line', { x1: padL, x2: W - padR, y1: yy, y2: yy, stroke: 'var(--border)', 'stroke-width': 1 }));
+      svg.appendChild(el('text', { x: padL - 8, y: yy + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted-foreground)', 'font-variant-numeric': 'tabular-nums' }, String(Math.round(v))));
+    }
+
+    // x labels: small ranges label every bar; large ranges label ~8 evenly,
+    // always the last; skip a regular tick that would collide with the last one.
+    const every = Math.max(1, Math.ceil(data.length / 8));
+    const lastI = data.length - 1;
+    const dense = data.length <= 10;
+    data.forEach((d, i) => {
+      const regular = dense ? true : i % every === 0 && lastI - i >= Math.max(2, every / 2);
+      if (regular || i === lastI) {
+        const lbl = range <= 7 ? ['日', '一', '二', '三', '四', '五', '六'][d.date.getDay()] : `${d.date.getMonth() + 1}/${d.date.getDate()}`;
+        svg.appendChild(el('text', { x: padL + band * i + band / 2, y: H - padB + 18, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--muted-foreground)' }, lbl));
+      }
+    });
+
+    // bars: 4px rounded top, square base
+    const peakIdx = data.reduce((best, d, i) => (d.min > data[best].min ? i : best), 0);
+    const todayIdx = data.length - 1;
+    data.forEach((d, i) => {
+      if (d.min <= 0) return;
+      const x = padL + band * i + (band - bw) / 2;
+      const top = y(d.min);
+      const h = padT + ih - top;
+      const r = Math.min(4, h / 2, bw / 2);
+      const path = `M${x} ${padT + ih} V${top + r} a${r} ${r} 0 0 1 ${r} -${r} H${x + bw - r} a${r} ${r} 0 0 1 ${r} ${r} V${padT + ih} Z`;
+      const bar = el('path', { d: path, fill: 'var(--primary)', class: 'bar', 'data-i': i });
+      if (i !== todayIdx) bar.setAttribute('opacity', '0.75');
+      svg.appendChild(bar);
+      // selective label: peak only
+      if (i === peakIdx) {
+        svg.appendChild(el('text', { x: x + bw / 2, y: top - 6, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 600, fill: 'var(--foreground)' }, `${Math.round(d.min)}`));
+      }
+    });
+
+    // hover hit-targets: whole band, bigger than the bar
+    data.forEach((d, i) => {
+      const hit = el('rect', { x: padL + band * i, y: padT, width: band, height: ih, fill: 'transparent' });
+      hit.addEventListener('mouseenter', () => {
+        tip.innerHTML = `<div class="text-muted-foreground">${d.key}</div><div class="font-semibold tabular-nums">${fmtClock(d.seconds)}</div>`;
+        tip.classList.remove('hidden');
+        svg.querySelectorAll('.bar').forEach((b) => b.classList.toggle('dim', (b as any).dataset.i !== String(i)));
+      });
+      hit.addEventListener('mousemove', (e: MouseEvent) => {
+        const box = svg.getBoundingClientRect();
+        const px = e.clientX - box.left, py = e.clientY - box.top;
+        tip.style.left = `${Math.min(px + 12, box.width - tip.offsetWidth - 4)}px`;
+        tip.style.top = `${Math.max(0, py - tip.offsetHeight - 8)}px`;
+      });
+      hit.addEventListener('mouseleave', () => {
+        tip.classList.add('hidden');
+        svg.querySelectorAll('.bar').forEach((b) => b.classList.remove('dim'));
+      });
+      svg.appendChild(hit);
+    });
+  }
+
+  function renderTable() {
+    const days = Object.entries(load().days).filter(([, s]) => s > 0).sort((a, b) => b[0].localeCompare(a[0]));
+    const tb = $('t-rows');
+    tb.innerHTML = days.length
+      ? days.map(([k, s]) => `<tr class="border-b border-border last:border-0"><td class="py-2 font-mono text-xs">${k}</td><td class="py-2 text-right tabular-nums">${fmtClock(s)}</td><td class="py-2 text-right tabular-nums text-muted-foreground">${Math.round(s / 60)}</td></tr>`).join('')
+      : `<tr><td colspan="3" class="py-6 text-center text-muted-foreground">暂无记录</td></tr>`;
+  }
+
+  function renderAll() { renderStats(); renderChart(); renderTable(); }
+
+  document.querySelectorAll<HTMLButtonElement>('.range-btn').forEach((b) =>
+    b.addEventListener('click', () => {
+      range = Number(b.dataset.range);
+      document.querySelectorAll('.range-btn').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+      renderChart();
+    }),
+  );
+
+  $('t-export').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(load(), null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `focus-time-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  $('t-clear').addEventListener('click', () => {
+    if (confirm('确定清空所有沉浸时间记录?此操作不可撤销。')) {
+      save({ days: {} });
+      renderAll();
+    }
+  });
+
+  window.addEventListener(FOCUS_EVENT, renderAll);
+  window.addEventListener('storage', (e) => { if (e.key === FOCUS_KEY) renderAll(); });
+  renderAll();
+</script>

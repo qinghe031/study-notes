@@ -1,0 +1,41 @@
+---
+// Homepage widget: today's immersive minutes + all-time total + a link to the
+// full 时间 page. Reads from localStorage; shows zeros for a first-time visitor.
+import { withBase } from '../lib/url';
+---
+
+<section class="focus-today card reveal flex items-center justify-between gap-4 p-5">
+  <div class="flex items-center gap-4">
+    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-full" style="background: color-mix(in srgb, var(--primary) 14%, transparent)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+      </svg>
+    </div>
+    <div>
+      <p class="text-xs uppercase tracking-wider text-muted-foreground">今日沉浸</p>
+      <p id="home-today" class="font-mono text-2xl font-semibold tabular-nums">00:00:00</p>
+      <p class="mt-0.5 text-xs text-muted-foreground">
+        累计 <span id="home-total" class="tabular-nums">0m</span> · 连续 <span id="home-streak" class="tabular-nums">0</span> 天
+      </p>
+    </div>
+  </div>
+  <a href={withBase('/time/')} class="chip shrink-0">时间记录 →</a>
+</section>
+
+<script>
+  import { fmtClock, fmt, todaySeconds, totalSeconds, streak, FOCUS_EVENT } from '../lib/focus';
+
+  const t = document.getElementById('home-today');
+  const tot = document.getElementById('home-total');
+  const st = document.getElementById('home-streak');
+
+  function render() {
+    if (t) t.textContent = fmtClock(todaySeconds());
+    if (tot) tot.textContent = fmt(totalSeconds());
+    if (st) st.textContent = String(streak());
+  }
+  render();
+  window.addEventListener(FOCUS_EVENT, render);
+  window.addEventListener('storage', render);
+  setInterval(render, 60_000);
+</script>

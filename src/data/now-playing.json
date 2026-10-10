@@ -1,0 +1,16 @@
+{
+  "note": "在听什么。填网易云音乐的歌曲 ID 即可播放,不需要账号或密钥。从「分享 → 复制链接」得到的链接里 id= 后面那串数字就是 ID。",
+  "nowPlaying": {
+    "title": "七友",
+    "artist": "梁汉文",
+    "neteaseId": "118261"
+  },
+  "playlists": [
+    {
+      "title": "专注学习",
+      "description": "写东西的时候循环这些。",
+      "neteaseId": "",
+      "tracks": []
+    }
+  ]
+}

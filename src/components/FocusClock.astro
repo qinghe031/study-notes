@@ -1,0 +1,190 @@
+---
+// Bottom-left focus clock. Auto-starts on note pages and the admin, pauses
+// when the tab is hidden or the user goes idle. Tracks today's seconds and the
+// all-time total in localStorage. Click to toggle manually on any page.
+interface Props {
+  /** Start counting as soon as the page loads. */
+  autoStart?: boolean;
+}
+const { autoStart = false } = Astro.props;
+---
+
+<div id="focus-clock" class="fixed bottom-5 left-5 z-30 select-none" data-auto={String(autoStart)}>
+  <!-- readout opens upward so it never collides with the theme picker -->
+  <div id="fc-panel" class="card pointer-events-none absolute bottom-full left-0 mb-2 w-max px-3 py-2 text-xs opacity-0 transition-opacity">
+    <p class="text-[10px] uppercase tracking-wider text-muted-foreground">今日沉浸</p>
+    <p id="fc-today" class="font-mono text-base font-semibold tabular-nums">00:00:00</p>
+    <p id="fc-state" class="mt-0.5 text-muted-foreground">未开始</p>
+  </div>
+
+  <button
+    id="fc-btn"
+    type="button"
+    class="fc-face card relative flex h-16 w-16 items-center justify-center rounded-full p-0 shadow-md transition-transform hover:scale-105"
+    aria-label="今日沉浸计时"
+    aria-pressed="false"
+    title="点击开始/暂停计时"
+  >
+    <svg viewBox="0 0 100 100" class="h-full w-full">
+      <circle cx="50" cy="50" r="46" fill="none" stroke="var(--muted)" stroke-width="4"/>
+      <circle id="fc-ring" cx="50" cy="50" r="46" fill="none" stroke="var(--primary)" stroke-width="4"
+        stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289"
+        transform="rotate(-90 50 50)" style="transition: stroke-dashoffset 0.6s ease"/>
+      <g stroke="var(--muted-foreground)" stroke-width="1.5" opacity="0.5">
+        <line x1="50" y1="12" x2="50" y2="16"/><line x1="88" y1="50" x2="84" y2="50"/>
+        <line x1="50" y1="88" x2="50" y2="84"/><line x1="12" y1="50" x2="16" y2="50"/>
+      </g>
+      <line id="fc-h" x1="50" y1="50" x2="50" y2="30" stroke="var(--foreground)" stroke-width="3.5" stroke-linecap="round"/>
+      <line id="fc-m" x1="50" y1="50" x2="50" y2="22" stroke="var(--foreground)" stroke-width="2.5" stroke-linecap="round"/>
+      <line id="fc-s" x1="50" y1="54" x2="50" y2="18" stroke="var(--primary)" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="2.5" fill="var(--primary)"/>
+    </svg>
+    <span id="fc-dot" class="absolute right-1 top-1 h-2 w-2 rounded-full bg-muted-foreground opacity-50"></span>
+  </button>
+</div>
+
+<style>
+  .fc-face[aria-pressed="true"] #fc-dot {
+    background: var(--primary);
+    opacity: 1;
+    animation: fc-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes fc-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 50%, transparent); }
+    50%      { transform: scale(1.15); box-shadow: 0 0 0 4px transparent; }
+  }
+  #focus-clock:hover #fc-panel,
+  #focus-clock.show-panel #fc-panel { opacity: 1; }
+  #fc-s { transition: transform 0.15s cubic-bezier(0.4, 2.1, 0.6, 1); }
+  @media (prefers-reduced-motion: reduce) {
+    #fc-dot { animation: none !important; }
+    #fc-s { transition: none; }
+  }
+</style>
+
+<script>
+  import { addSeconds, todaySeconds, fmtClock, FOCUS_EVENT } from '../lib/focus';
+
+  const root = document.getElementById('focus-clock')!;
+  const btn = document.getElementById('fc-btn') as HTMLButtonElement;
+  const ring = document.getElementById('fc-ring')!;
+  const hH = document.getElementById('fc-h')!;
+  const hM = document.getElementById('fc-m')!;
+  const hS = document.getElementById('fc-s')!;
+  const todayEl = document.getElementById('fc-today')!;
+  const stateEl = document.getElementById('fc-state')!;
+
+  const GOAL = 2 * 3600; // ring fills at 2h/day
+  const IDLE_MS = 2 * 60 * 1000;
+  const CIRC = 289;
+
+  let running = false;
+  let lastTick = 0;
+  let lastActivity = Date.now();
+  let today = todaySeconds();
+
+  function render() {
+    todayEl.textContent = fmtClock(today);
+    const pct = Math.min(1, today / GOAL);
+    (ring as any).style.strokeDashoffset = String(CIRC * (1 - pct));
+  }
+
+  function clockHands() {
+    const d = new Date();
+    const s = d.getSeconds();
+    const m = d.getMinutes() + s / 60;
+    const h = (d.getHours() % 12) + m / 60;
+    hS.setAttribute('transform', `rotate(${s * 6} 50 50)`);
+    hM.setAttribute('transform', `rotate(${m * 6} 50 50)`);
+    hH.setAttribute('transform', `rotate(${h * 30} 50 50)`);
+  }
+
+  function setState(txt: string) {
+    stateEl.textContent = txt;
+  }
+
+  function start(reason = '') {
+    if (running) return;
+    running = true;
+    lastTick = Date.now();
+    lastActivity = Date.now();
+    btn.setAttribute('aria-pressed', 'true');
+    setState(reason || '计时中');
+    root.classList.add('show-panel');
+    setTimeout(() => root.classList.remove('show-panel'), 1800);
+  }
+
+  function stop(reason = '已暂停') {
+    if (!running) return;
+    flush();
+    running = false;
+    btn.setAttribute('aria-pressed', 'false');
+    setState(reason);
+  }
+
+  // Commit elapsed seconds since last tick into storage.
+  function flush() {
+    if (!running) return;
+    const now = Date.now();
+    const sec = Math.floor((now - lastTick) / 1000);
+    if (sec > 0) {
+      today = addSeconds(sec);
+      lastTick += sec * 1000;
+    }
+  }
+
+  // 1Hz loop: advance hands, flush time, check idle.
+  setInterval(() => {
+    clockHands();
+    if (running) {
+      if (Date.now() - lastActivity > IDLE_MS) {
+        stop('闲置,已暂停');
+      } else {
+        flush();
+        render();
+      }
+    }
+  }, 1000);
+
+  // Activity resets idle timer; also resumes if we paused for idle.
+  const bump = () => {
+    lastActivity = Date.now();
+    if (!running && stateEl.textContent === '闲置,已暂停') start('继续计时');
+  };
+  for (const ev of ['mousemove', 'keydown', 'scroll', 'touchstart', 'pointerdown']) {
+    window.addEventListener(ev, bump, { passive: true });
+  }
+
+  // Tab hidden → pause; visible → resume if it was auto/manual running before.
+  let pausedByHide = false;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (running) { stop('切到后台,已暂停'); pausedByHide = true; }
+    } else if (pausedByHide) {
+      pausedByHide = false;
+      start('继续计时');
+    }
+  });
+
+  // Save on unload.
+  window.addEventListener('pagehide', flush);
+  window.addEventListener('beforeunload', flush);
+
+  // Manual toggle.
+  btn.addEventListener('click', () => (running ? stop() : start('手动开始')));
+
+  // Keep in sync if another tab/page updated storage.
+  window.addEventListener(FOCUS_EVENT, (e: any) => { today = e.detail?.today ?? todaySeconds(); render(); });
+  window.addEventListener('storage', () => { today = todaySeconds(); render(); });
+
+  // Day rollover: if the calendar day changes while open, re-read.
+  let dayKey = new Date().toDateString();
+  setInterval(() => {
+    const k = new Date().toDateString();
+    if (k !== dayKey) { dayKey = k; today = todaySeconds(); render(); }
+  }, 30_000);
+
+  clockHands();
+  render();
+  if (root.dataset.auto === 'true') start('阅读中,自动计时');
+</script>

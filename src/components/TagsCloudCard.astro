@@ -1,0 +1,29 @@
+---
+import { withBase } from '../lib/url';
+import SidebarCard from './SidebarCard.astro';
+import type { Bucket } from '../lib/content';
+
+interface Props {
+  tags: Bucket[];
+  limit?: number;
+}
+const { tags, limit = 24 } = Astro.props;
+const max = Math.max(1, ...tags.map((t) => t.count));
+---
+
+<SidebarCard title="标签" href="/tag/">
+  <div class="flex flex-wrap gap-1.5">
+    {
+      tags.slice(0, limit).map((t) => (
+        <a
+          href={withBase(`/tag/${t.slug}/`)}
+          class="chip"
+          style={`font-size:${(0.7 + (t.count / max) * 0.25).toFixed(2)}rem`}
+        >
+          #{t.name}
+          <span class="opacity-60">{t.count}</span>
+        </a>
+      ))
+    }
+  </div>
+</SidebarCard>

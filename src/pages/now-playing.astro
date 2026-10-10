@@ -1,0 +1,78 @@
+---
+import { withBase } from '../lib/url';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import Turntable from '../components/Turntable.astro';
+import NeteaseEmbed from '../components/NeteaseEmbed.astro';
+import { NOW_PLAYING } from '../lib/site';
+
+const { nowPlaying, playlists } = NOW_PLAYING;
+const hasNow = Boolean(nowPlaying?.neteaseId);
+const lists = (playlists || []).filter((p) => p.neteaseId || (p.tracks && p.tracks.some((t) => t.neteaseId)));
+---
+
+<BaseLayout title="在听什么">
+  <Hero eyebrow="Now playing" title="在听什么" subtitle="写东西的时候在听的歌。点一下唱片就能播放。" />
+
+  <div class="mb-10">
+    <Turntable />
+  </div>
+
+  {
+    !hasNow && lists.length === 0 && (
+      <div class="card p-6 text-sm text-muted-foreground">
+        <p class="font-medium text-foreground">怎么填歌</p>
+        <ol class="mt-2 list-decimal space-y-1 pl-5">
+          <li>在网易云音乐里打开一首歌,点「分享 → 复制链接」。</li>
+          <li>链接长这样:<code class="rounded bg-muted px-1 py-0.5">https://music.163.com/song?id=<b>1234567890</b></code>,加粗那串数字就是 ID。</li>
+          <li>填进 <code class="rounded bg-muted px-1 py-0.5">src/data/now-playing.json</code>,或在 <a href={withBase("/admin/#music")} class="text-primary">后台</a> 直接粘贴链接。</li>
+        </ol>
+        <p class="mt-2">歌单同理:分享歌单得到 <code class="rounded bg-muted px-1 py-0.5">playlist?id=…</code>,填到 <code class="rounded bg-muted px-1 py-0.5">playlists[].neteaseId</code>。</p>
+        <p class="mt-2 text-xs">不需要登录,不需要密钥。个别有版权限制的歌在外链里放不了,换一首即可。</p>
+      </div>
+    )
+  }
+
+  {
+    lists.length > 0 && (
+      <section class="space-y-8">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">歌单</h2>
+        {lists.map((pl, i) => (
+          <article class="card reveal p-5" style={`animation-delay:${i * 60}ms`}>
+            <header class="mb-3">
+              <h3 class="text-lg font-semibold tracking-tight">{pl.title}</h3>
+              {pl.description && <p class="mt-1 text-sm text-muted-foreground">{pl.description}</p>}
+            </header>
+
+            {pl.neteaseId && <NeteaseEmbed id={pl.neteaseId} kind="playlist" size="full" title={pl.title} />}
+
+            {!pl.neteaseId && pl.tracks && (
+              <ul class="space-y-3">
+                {pl.tracks.map((t) =>
+                  t.neteaseId ? (
+                    <li>
+                      <p class="mb-1 px-1 text-sm">
+                        <span class="font-medium">{t.title}</span>
+                        {t.artist && <span class="text-muted-foreground"> · {t.artist}</span>}
+                      </p>
+                      <NeteaseEmbed id={t.neteaseId} title={t.title} />
+                    </li>
+                  ) : (
+                    <li class="px-1 text-sm text-muted-foreground">
+                      {t.title}
+                      {t.artist && ` · ${t.artist}`}
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+          </article>
+        ))}
+      </section>
+    )
+  }
+
+  <p class="mt-10 text-center text-xs text-muted-foreground">
+    播放器由网易云音乐提供。离线双击版没有网络时无法播放,其余页面不受影响。
+  </p>
+</BaseLayout>

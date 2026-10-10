@@ -1,0 +1,67 @@
+---
+// Full-screen image viewer. Any element with .gallery-item and data-src opens it.
+---
+
+<div
+  id="lightbox"
+  class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+  role="dialog"
+  aria-modal="true"
+  aria-label="图片预览"
+>
+  <button id="lb-close" aria-label="关闭" class="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  <button id="lb-prev" aria-label="上一张" class="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+  </button>
+  <button id="lb-next" aria-label="下一张" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+  </button>
+  <figure class="flex max-h-full max-w-5xl flex-col items-center gap-3">
+    <img id="lb-img" src="" alt="" class="max-h-[80vh] max-w-full rounded-lg object-contain shadow-2xl" />
+    <figcaption id="lb-cap" class="text-center text-sm text-white/80"></figcaption>
+  </figure>
+</div>
+
+<script>
+  const lb = document.getElementById('lightbox')!;
+  const img = document.getElementById('lb-img') as HTMLImageElement;
+  const cap = document.getElementById('lb-cap')!;
+  const items = Array.from(document.querySelectorAll<HTMLElement>('.gallery-item'));
+  let idx = 0;
+
+  function show(i: number) {
+    idx = (i + items.length) % items.length;
+    const el = items[idx];
+    img.src = el.dataset.src || '';
+    img.alt = el.dataset.caption || '';
+    const album = el.dataset.album ? `${el.dataset.album} · ` : '';
+    cap.textContent = `${album}${el.dataset.caption || ''}  (${idx + 1}/${items.length})`;
+  }
+  function open(i: number) {
+    show(i);
+    lb.classList.remove('hidden');
+    lb.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+  function close() {
+    lb.classList.add('hidden');
+    lb.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  items.forEach((el, i) => el.addEventListener('click', () => open(i)));
+  document.getElementById('lb-close')?.addEventListener('click', close);
+  document.getElementById('lb-prev')?.addEventListener('click', () => show(idx - 1));
+  document.getElementById('lb-next')?.addEventListener('click', () => show(idx + 1));
+  lb.addEventListener('click', (e) => {
+    if (e.target === lb) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (lb.classList.contains('hidden')) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowLeft') show(idx - 1);
+    if (e.key === 'ArrowRight') show(idx + 1);
+  });
+</script>

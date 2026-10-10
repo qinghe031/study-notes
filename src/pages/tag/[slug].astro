@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../../components/Hero.astro';
+import PostCard from '../../components/PostCard.astro';
+import { getNotes, getTags } from '../../lib/content';
+
+export async function getStaticPaths() {
+  const notes = await getNotes();
+  return getTags(notes).map((t) => ({
+    params: { slug: t.slug },
+    props: { name: t.name, notes: notes.filter((n) => n.data.tags.includes(t.name)) },
+  }));
+}
+
+const { name, notes } = Astro.props;
+---
+
+<BaseLayout title={`标签 · ${name}`}>
+  <Hero eyebrow="Tag" title={`#${name}`} subtitle={`${notes.length} 篇笔记`} />
+  <div class="grid gap-5 md:grid-cols-2">
+    {notes.map((n, i) => <PostCard note={n} index={i} />)}
+  </div>
+</BaseLayout>

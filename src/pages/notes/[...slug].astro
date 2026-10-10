@@ -1,0 +1,138 @@
+---
+import { withBase } from '../../lib/url';
+import { render } from 'astro:content';
+import { Image } from 'astro:assets';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TableOfContents from '../../components/TableOfContents.astro';
+import CategoriesCard from '../../components/CategoriesCard.astro';
+import RecentPostsCard from '../../components/RecentPostsCard.astro';
+import LikeButton from '../../components/LikeButton.astro';
+import Giscus from '../../components/Giscus.astro';
+import ReadingProgress from '../../components/ReadingProgress.astro';
+import PostCard from '../../components/PostCard.astro';
+import { INTERACTIONS } from '../../lib/site';
+import {
+  getNotes,
+  getCategories,
+  noteHref,
+  readingMinutes,
+  formatDate,
+  slugify,
+  adjacent,
+  filterToc,
+  related,
+} from '../../lib/content';
+
+export async function getStaticPaths() {
+  const notes = await getNotes();
+  return notes.map((note) => ({ params: { slug: note.id }, props: { note } }));
+}
+
+const { note } = Astro.props;
+const notes = await getNotes();
+const categories = getCategories(notes);
+const { Content, headings } = await render(note);
+const toc = filterToc(headings);
+const { newer, older } = adjacent(notes, note);
+const relatedNotes = related(notes, note);
+const { title, date, updated, category, tags, summary, cover } = note.data;
+const minutes = readingMinutes(note.body);
+---
+
+<BaseLayout title={title} description={summary} autoFocus>
+  <ReadingProgress />
+
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
+    <article class="min-w-0">
+      <header class="reveal mb-8">
+        <a href={withBase("/")} class="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+          ← 返回首页
+        </a>
+        <div class="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <a href={withBase(`/category/${slugify(category)}/`)} class="rounded-md bg-muted px-2 py-0.5 hover:text-primary">{category}</a>
+          <time datetime={date.toISOString()}>{formatDate(date)}</time>
+          {updated && <span>· 更新于 {formatDate(updated)}</span>}
+          <span>·</span>
+          <span>约 {minutes} 分钟</span>
+        </div>
+        <h1 class="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">{title}</h1>
+        {summary && <p class="mt-3 text-base text-muted-foreground">{summary}</p>}
+        {
+          tags.length > 0 && (
+            <div class="mt-4 flex flex-wrap gap-1.5">
+              {tags.map((t) => (
+                <a href={withBase(`/tag/${slugify(t)}/`)} class="chip">
+                  #{t}
+                </a>
+              ))}
+            </div>
+          )
+        }
+      </header>
+
+      {
+        cover && (
+          <div class="card reveal mb-8 overflow-hidden">
+            <Image src={cover} alt={title} width={1400} height={700} class="w-full object-cover" />
+          </div>
+        )
+      }
+
+      <div class="card reveal p-6 md:p-10">
+        <div class="prose prose-neutral max-w-none dark:prose-invert">
+          <Content />
+        </div>
+
+        <footer class="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6">
+          <LikeButton id={note.id} />
+          <p class="text-xs text-muted-foreground">觉得有用就点个喜欢吧。</p>
+        </footer>
+      </div>
+
+      <nav class="mt-8 grid gap-4 sm:grid-cols-2" aria-label="上下篇">
+        {
+          older ? (
+            <a href={noteHref(older)} class="card card-hover p-4">
+              <p class="text-xs text-muted-foreground">← 上一篇</p>
+              <p class="mt-1 line-clamp-1 font-medium">{older.data.title}</p>
+            </a>
+          ) : (
+            <div />
+          )
+        }
+        {
+          newer && (
+            <a href={noteHref(newer)} class="card card-hover p-4 text-right">
+              <p class="text-xs text-muted-foreground">下一篇 →</p>
+              <p class="mt-1 line-clamp-1 font-medium">{newer.data.title}</p>
+            </a>
+          )
+        }
+      </nav>
+
+      {
+        relatedNotes.length > 0 && (
+          <section class="mt-10">
+            <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">相关笔记</h2>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedNotes.map((n, i) => (
+                <PostCard note={n} index={i} />
+              ))}
+            </div>
+          </section>
+        )
+      }
+
+      <section class="mt-10" id="comments">
+        <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">评论</h2>
+        <Giscus cfg={INTERACTIONS.comments.giscus} />
+      </section>
+    </article>
+
+    <aside class="space-y-5 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto">
+      <TableOfContents headings={toc} />
+      <RecentPostsCard notes={notes} />
+      <CategoriesCard categories={categories} />
+    </aside>
+  </div>
+</BaseLayout>

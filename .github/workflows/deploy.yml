@@ -1,0 +1,57 @@
+# 推到 GitHub 的 main 分支后自动构建并发布到 GitHub Pages。
+# 在仓库 Settings → Pages → Source 选 "GitHub Actions" 即可生效。
+#
+# 两种情况自动区分:
+#  - 仓库名是 <用户名>.github.io  → 用户站,网址是根路径
+#  - 其他仓库名                    → 项目站,网址带 /仓库名/ 前缀
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out site URL and base path
+        id: cfg
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          if [ "$REPO" = "$OWNER.github.io" ]; then
+            echo "site=https://$OWNER.github.io" >> "$GITHUB_OUTPUT"
+            echo "base=/" >> "$GITHUB_OUTPUT"
+          else
+            echo "site=https://$OWNER.github.io" >> "$GITHUB_OUTPUT"
+            echo "base=/$REPO/" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: withastro/action@v3
+        with:
+          node-version: 22
+        env:
+          SITE_URL: ${{ steps.cfg.outputs.site }}
+          BASE_PATH: ${{ steps.cfg.outputs.base }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,85 @@
+---
+import { withBase } from '../lib/url';
+import '../styles/global.css';
+import 'katex/dist/katex.min.css';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import ThemePicker from '../components/ThemePicker.astro';
+import ScrollToTop from '../components/ScrollToTop.astro';
+import LightDust from '../components/LightDust.astro';
+import Mascot from '../components/Mascot.astro';
+import FocusClock from '../components/FocusClock.astro';
+import { SITE } from '../lib/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Use the narrower shell for article pages. */
+  narrow?: boolean;
+  /** Start the focus timer as soon as this page loads (note / admin pages). */
+  autoFocus?: boolean;
+}
+
+const { title, description = SITE.description, narrow = false, autoFocus = false } = Astro.props;
+const fullTitle = title ? `${title} · ${SITE.title}` : SITE.title;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <title>{fullTitle}</title>
+    <link rel="icon" href={withBase("/favicon.svg")} type="image/svg+xml" />
+    <link rel="alternate" type="application/rss+xml" title={SITE.title} href={withBase("/rss.xml")} />
+
+    {/* Apply persisted theme BEFORE first paint to avoid a flash of the wrong mode/hue. */}
+    <script is:inline>
+      (function () {
+        try {
+          var root = document.documentElement;
+          var mode = localStorage.getItem('site-mode');
+          if (!mode) mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          root.classList.toggle('dark', mode === 'dark');
+          var hue = localStorage.getItem('site-theme');
+          if (hue && hue !== 'sky') root.setAttribute('data-site-theme', hue);
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <LightDust />
+    <Navbar />
+    <main class:list={['shell relative z-10 flex-1 py-8', narrow && 'max-w-[var(--site-shell-narrow-max)]']}>
+      <slot />
+    </main>
+    <Footer />
+    <ThemePicker />
+    <ScrollToTop />
+    <Mascot />
+    <FocusClock autoStart={autoFocus} />
+
+    <script>
+      // Reveal-on-scroll: elements with .reveal animate in when they enter the viewport.
+      const els = document.querySelectorAll<HTMLElement>('.reveal');
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-visible');
+                io.unobserve(e.target);
+              }
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px' },
+        );
+        els.forEach((el) => io.observe(el));
+      } else {
+        els.forEach((el) => el.classList.add('is-visible'));
+      }
+    </script>
+  </body>
+</html>

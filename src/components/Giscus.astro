@@ -1,0 +1,52 @@
+---
+import { giscusReady, type GiscusConfig } from '../lib/site';
+
+interface Props {
+  cfg: GiscusConfig;
+  term?: string;
+}
+const { cfg, term } = Astro.props;
+const ready = giscusReady(cfg);
+const mapping = term ? 'specific' : cfg.mapping || 'pathname';
+---
+
+{
+  ready ? (
+    <div class="giscus-container card p-4">
+      <script
+        is:inline
+        src="https://giscus.app/client.js"
+        data-repo={cfg.repo}
+        data-repo-id={cfg.repoId}
+        data-category={cfg.category}
+        data-category-id={cfg.categoryId}
+        data-mapping={mapping}
+        data-term={term}
+        data-strict="0"
+        data-reactions-enabled={cfg.reactionsEnabled || '1'}
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async
+      ></script>
+      <noscript>评论需要 JavaScript。开启后即可查看与发表评论。</noscript>
+    </div>
+  ) : (
+    <div class="card p-6 text-center text-sm text-muted-foreground">
+      <p>评论功能尚未启用。</p>
+      <p class="mt-2">
+        这是一个静态站点,评论需要一个「存储留言」的地方。推荐免费的 <b>Giscus</b>(基于 GitHub Discussions,无需服务器):
+      </p>
+      <ol class="mx-auto mt-3 max-w-md space-y-1 text-left">
+        <li>1. 在 GitHub 建一个公开仓库,开启 Discussions。</li>
+        <li>2. 到 <a class="text-primary" href="https://giscus.app" target="_blank" rel="noopener">giscus.app</a> 按提示授权并生成配置。</li>
+        <li>3. 把生成的 <code class="rounded bg-muted px-1 py-0.5">repo / repoId / categoryId</code> 填进
+          <code class="rounded bg-muted px-1 py-0.5">src/data/interactions.json</code>。</li>
+      </ol>
+      <p class="mt-3 text-xs">留言内容会存在 GitHub 上,而不是你的电脑里;不配置也不影响阅读。</p>
+    </div>
+  )
+}

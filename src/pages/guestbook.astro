@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import Giscus from '../components/Giscus.astro';
+import { GUESTBOOK_ENTRIES, INTERACTIONS, giscusReady } from '../lib/site';
+
+const online = INTERACTIONS.guestbook.provider === 'giscus' && giscusReady(INTERACTIONS.guestbook.giscus);
+const entries = [...GUESTBOOK_ENTRIES].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+const tilt = (i: number) => [-1.5, 1.2, -0.8, 1.8, -1.2, 0.9][i % 6];
+const palette = ['#dfeaf3', '#f3e8d2', '#e8e2f1', '#e2ecdf', '#f3e1e5', '#dfedec', '#f4e5d9'];
+const paletteDark = ['#2b3b4c', '#4a3f2c', '#3d3550', '#2f4030', '#4c333a', '#2c4442', '#4b3a2d'];
+---
+
+<BaseLayout title="留言板">
+  <Hero eyebrow="Guestbook" title="留言板" subtitle="路过的话,留下一句话吧。" />
+
+  {
+    online ? (
+      <section class="mb-10">
+        <Giscus cfg={INTERACTIONS.guestbook.giscus} term={INTERACTIONS.guestbook.giscus.term || 'guestbook'} />
+      </section>
+    ) : (
+      <section class="card mb-10 p-5 text-sm text-muted-foreground">
+        <p class="font-medium text-foreground">当前是本地模式</p>
+        <p class="mt-1">
+          下面的留言来自 <code class="rounded bg-muted px-1 py-0.5">src/data/guestbook.json</code>,由你手动维护(比如把微信/邮件里收到的留言抄进来)。
+          想让访客直接在线留言,把 <code class="rounded bg-muted px-1 py-0.5">interactions.json</code> 里
+          <code class="rounded bg-muted px-1 py-0.5">guestbook.provider</code> 改成 <code class="rounded bg-muted px-1 py-0.5">giscus</code> 并填好配置即可。
+        </p>
+      </section>
+    )
+  }
+
+  {
+    entries.length > 0 && (
+      <section>
+        <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          {online ? '历史留言' : '留言'} · {entries.length}
+        </h2>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {entries.map((e, i) => (
+            <article
+              class="guest-note reveal p-5"
+              style={`--tilt:${tilt(i)}deg;--note:${palette[i % palette.length]};--note-dark:${paletteDark[i % paletteDark.length]};animation-delay:${i * 50}ms`}
+            >
+              <p class="whitespace-pre-line text-[15px] leading-relaxed">{e.message}</p>
+              <footer class="mt-4 flex items-center justify-between text-xs opacity-70">
+                <span>— {e.name}</span>
+                <span>{e.date}</span>
+              </footer>
+            </article>
+          ))}
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .guest-note {
+    background: var(--note);
+    color: #3f4854;
+    border-radius: 0.5rem;
+    transform: rotate(var(--tilt));
+    box-shadow: 0 1px 2px rgba(63, 72, 84, 0.08), 0 14px 28px -16px rgba(63, 72, 84, 0.35);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    font-family: "Segoe Print", "KaiTi", "STKaiti", "Noto Serif SC", serif;
+  }
+  .guest-note:hover {
+    transform: rotate(0deg) translateY(-3px);
+  }
+  :global(html.dark) .guest-note {
+    background: var(--note-dark);
+    color: #e7e5e0;
+  }
+</style>

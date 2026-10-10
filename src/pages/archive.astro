@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import { getNotes, groupByYear, noteHref, formatDate } from '../lib/content';
+
+const notes = await getNotes();
+const years = groupByYear(notes);
+---
+
+<BaseLayout title="归档">
+  <Hero eyebrow="Archive" title="归档" subtitle={`共 ${notes.length} 篇笔记`} />
+  <div class="space-y-8">
+    {
+      years.map(([year, list]) => (
+        <section class="reveal">
+          <h2 class="mb-3 flex items-baseline gap-2 text-2xl font-bold tracking-tight">
+            <span class="gradient-text">{year}</span>
+            <span class="text-sm font-normal text-muted-foreground">{list.length} 篇</span>
+          </h2>
+          <ul class="card divide-y divide-border">
+            {list.map((n) => (
+              <li>
+                <a href={noteHref(n)} class="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted">
+                  <time class="w-24 shrink-0 font-mono text-xs text-muted-foreground">{formatDate(n.data.date)}</time>
+                  <span class="line-clamp-1 flex-1">{n.data.title}</span>
+                  <span class="hidden text-xs text-muted-foreground sm:inline">{n.data.category}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+</BaseLayout>

@@ -1,0 +1,25 @@
+---
+import SidebarCard from './SidebarCard.astro';
+import { noteHref, formatDate, type Note } from '../lib/content';
+
+interface Props {
+  notes: Note[];
+  limit?: number;
+}
+const { notes, limit = 5 } = Astro.props;
+---
+
+<SidebarCard title="最近更新" href="/archive/">
+  <ul class="space-y-2">
+    {
+      notes.slice(0, limit).map((n) => (
+        <li>
+          <a href={noteHref(n)} class="group block">
+            <p class="line-clamp-1 text-sm transition-colors group-hover:text-primary">{n.data.title}</p>
+            <p class="text-xs text-muted-foreground">{formatDate(n.data.date)}</p>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</SidebarCard>

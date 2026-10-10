@@ -1,0 +1,15 @@
+{
+  "note": "把照片放进 public/gallery/ 下按相册分文件夹,再在这里登记。改 src/data/gallery.json 即可增删。",
+  "albums": [
+    {
+      "title": "校园的黄昏",
+      "date": "2026-09-20",
+      "description": "饭后散步随手拍的几张。",
+      "photos": [
+        { "src": "/gallery/campus/01.svg", "caption": "图书馆西侧的天空" },
+        { "src": "/gallery/campus/02.svg", "caption": "操场边的树" },
+        { "src": "/gallery/campus/03.svg", "caption": "路灯刚亮" }
+      ]
+    }
+  ]
+}

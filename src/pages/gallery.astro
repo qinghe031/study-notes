@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import Lightbox from '../components/Lightbox.astro';
+import { ALBUMS, ALL_PHOTOS } from '../lib/site';
+---
+
+<BaseLayout title="生活相册">
+  <Hero eyebrow="Life gallery" title="生活相册" subtitle={`${ALBUMS.length} 个相册 · ${ALL_PHOTOS.length} 张照片`} />
+
+  {
+    ALBUMS.length === 0 && (
+      <div class="card p-8 text-center text-muted-foreground">
+        还没有相册。把照片放进 <code class="rounded bg-muted px-1.5 py-0.5">public/gallery/</code>,然后在
+        <code class="rounded bg-muted px-1.5 py-0.5">src/data/gallery.json</code> 里登记。
+      </div>
+    )
+  }
+
+  <div class="space-y-12">
+    {
+      ALBUMS.map((album, ai) => (
+        <section class="reveal" style={`animation-delay:${ai * 80}ms`}>
+          <header class="mb-4 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 class="text-xl font-semibold tracking-tight">{album.title}</h2>
+              {album.description && <p class="mt-1 text-sm text-muted-foreground">{album.description}</p>}
+            </div>
+            <div class="text-xs text-muted-foreground">
+              {album.date} · {album.photos.length} 张
+            </div>
+          </header>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {album.photos.map((p, pi) => (
+              <button
+                type="button"
+                class="gallery-item card group relative aspect-square overflow-hidden p-0"
+                data-src={p.src}
+                data-caption={p.caption || ''}
+                data-album={album.title}
+                aria-label={p.caption || `${album.title} 第 ${pi + 1} 张`}
+              >
+                <img
+                  src={p.src}
+                  alt={p.caption || ''}
+                  loading="lazy"
+                  class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                {p.caption && (
+                  <span class="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/60 to-transparent px-3 pb-2 pt-6 text-left text-xs text-white transition-transform duration-300 group-hover:translate-y-0">
+                    {p.caption}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+
+  <Lightbox />
+</BaseLayout>

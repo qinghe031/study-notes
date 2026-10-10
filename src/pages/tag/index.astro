@@ -1,0 +1,24 @@
+---
+import { withBase } from '../../lib/url';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../../components/Hero.astro';
+import { getNotes, getTags } from '../../lib/content';
+
+const notes = await getNotes();
+const tags = getTags(notes);
+const max = Math.max(1, ...tags.map((t) => t.count));
+---
+
+<BaseLayout title="标签">
+  <Hero eyebrow="Tags" title="标签" subtitle={`共 ${tags.length} 个标签`} />
+  <div class="card reveal flex flex-wrap gap-2 p-6">
+    {
+      tags.map((t) => (
+        <a href={withBase(`/tag/${t.slug}/`)} class="chip" style={`font-size:${(0.8 + (t.count / max) * 0.5).toFixed(2)}rem`}>
+          #{t.name}
+          <span class="opacity-60">{t.count}</span>
+        </a>
+      ))
+    }
+  </div>
+</BaseLayout>

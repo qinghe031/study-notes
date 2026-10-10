@@ -1,0 +1,32 @@
+{
+  "_readme": "互动功能的开关。默认全部本地可用;填上 giscus 配置后,评论/留言板会变成在线可提交。",
+
+  "likes": {
+    "provider": "local"
+  },
+
+  "comments": {
+    "provider": "none",
+    "giscus": {
+      "repo": "",
+      "repoId": "",
+      "category": "Comments",
+      "categoryId": "",
+      "mapping": "pathname",
+      "reactionsEnabled": "1"
+    }
+  },
+
+  "guestbook": {
+    "provider": "list",
+    "giscus": {
+      "repo": "",
+      "repoId": "",
+      "category": "Guestbook",
+      "categoryId": "",
+      "mapping": "specific",
+      "term": "guestbook",
+      "reactionsEnabled": "1"
+    }
+  }
+}

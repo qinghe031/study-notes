@@ -1,0 +1,72 @@
+---
+import { THEMES } from '../lib/site';
+---
+
+<div class="fixed bottom-5 left-24 z-40">
+  <button
+    id="theme-picker-btn"
+    aria-label="切换主题色"
+    aria-expanded="false"
+    class="card flex h-10 w-10 items-center justify-center text-muted-foreground shadow-md transition-colors hover:text-foreground"
+  >
+    <span class="inline-block h-4 w-4 rounded-full" style="background: var(--gradient-primary)"></span>
+  </button>
+
+  <div
+    id="theme-picker-panel"
+    class="card absolute bottom-12 left-0 hidden w-44 p-2 shadow-lg"
+  >
+    <p class="px-2 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">主题色</p>
+    <div class="grid grid-cols-4 gap-1.5">
+      {
+        THEMES.map((t) => (
+          <button
+            data-theme={t.id}
+            title={t.label}
+            aria-label={t.label}
+            class="theme-swatch flex h-8 w-8 items-center justify-center rounded-md border border-border transition-transform hover:scale-110"
+          >
+            <span class="h-4 w-4 rounded-full" style={`background:${t.swatch}`} />
+          </button>
+        ))
+      }
+    </div>
+  </div>
+</div>
+
+<style>
+  .theme-swatch[data-active="true"] {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+  }
+</style>
+
+<script>
+  const btn = document.getElementById('theme-picker-btn');
+  const panel = document.getElementById('theme-picker-panel');
+  const swatches = document.querySelectorAll<HTMLButtonElement>('.theme-swatch');
+
+  function syncActive() {
+    const cur = document.documentElement.getAttribute('data-site-theme') || 'sky';
+    swatches.forEach((s) => s.setAttribute('data-active', String(s.dataset.theme === cur)));
+  }
+
+  btn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = panel?.classList.toggle('hidden') === false;
+    btn.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', () => panel?.classList.add('hidden'));
+  panel?.addEventListener('click', (e) => e.stopPropagation());
+
+  swatches.forEach((s) =>
+    s.addEventListener('click', () => {
+      const id = s.dataset.theme || 'sky';
+      if (id === 'sky') document.documentElement.removeAttribute('data-site-theme');
+      else document.documentElement.setAttribute('data-site-theme', id);
+      localStorage.setItem('site-theme', id);
+      syncActive();
+    }),
+  );
+  syncActive();
+</script>

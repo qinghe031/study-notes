@@ -1,0 +1,52 @@
+---
+import { withBase } from '../lib/url';
+import { Image } from 'astro:assets';
+import { noteHref, readingMinutes, formatDate, slugify, type Note } from '../lib/content';
+
+interface Props {
+  note: Note;
+  index?: number;
+}
+const { note, index = 0 } = Astro.props;
+const { title, date, category, tags, summary, cover, sticky } = note.data;
+const minutes = readingMinutes(note.body);
+---
+
+<article
+  class="card card-hover reveal overflow-hidden"
+  style={`animation-delay:${Math.min(index, 8) * 60}ms`}
+>
+  <a href={noteHref(note)} class="block">
+    {
+      cover && (
+        <div class="aspect-[16/7] w-full overflow-hidden border-b border-border">
+          <Image src={cover} alt={title} width={1200} height={525} class="h-full w-full object-cover" loading="lazy" />
+        </div>
+      )
+    }
+    <div class="p-5">
+      <div class="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {sticky > 0 && <span class="chip border-primary/40 text-primary">置顶</span>}
+        <span class="rounded-md bg-muted px-2 py-0.5">{category}</span>
+        <time datetime={date.toISOString()}>{formatDate(date)}</time>
+        <span>·</span>
+        <span>约 {minutes} 分钟</span>
+      </div>
+      <h2 class="text-lg font-semibold leading-snug tracking-tight transition-colors hover:text-primary">
+        {title}
+      </h2>
+      {summary && <p class="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{summary}</p>}
+    </div>
+  </a>
+  {
+    tags.length > 0 && (
+      <div class="flex flex-wrap gap-1.5 px-5 pb-4">
+        {tags.map((t) => (
+          <a href={withBase(`/tag/${slugify(t)}/`)} class="chip">
+            #{t}
+          </a>
+        ))}
+      </div>
+    )
+  }
+</article>

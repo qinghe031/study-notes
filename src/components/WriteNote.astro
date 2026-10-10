@@ -1,0 +1,188 @@
+---
+// "写笔记" entry point. Shown only when the dev writer is reachable (npm run dev),
+// since the hosted static site has nowhere to save to. Opens an editor sheet.
+import { formatDate } from '../lib/content';
+const today = formatDate(new Date());
+---
+
+<!-- trigger (hidden until the dev writer answers) -->
+<button id="wn-open" type="button" class="wn-trigger chip hidden items-center gap-1.5 !px-3 !py-1.5 !text-sm">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+  写笔记
+</button>
+
+<!-- editor sheet -->
+<div id="wn-sheet" class="fixed inset-0 z-[75] hidden" role="dialog" aria-modal="true" aria-label="写笔记">
+  <div id="wn-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+  <div class="absolute inset-x-0 bottom-0 top-0 mx-auto flex max-w-5xl flex-col bg-background shadow-2xl sm:inset-y-4 sm:rounded-2xl">
+    <header class="flex items-center justify-between border-b border-border px-5 py-3">
+      <div class="flex items-center gap-3">
+        <h2 class="text-base font-semibold">写笔记</h2>
+        <span id="wn-path" class="hidden text-xs text-muted-foreground sm:inline">src/content/notes/…</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="wn-msg" class="text-xs text-muted-foreground"></span>
+        <button id="wn-save" type="button" class="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50">保存并打开</button>
+        <button id="wn-close" type="button" aria-label="关闭" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <form id="wn-form" class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5" autocomplete="off">
+      <input name="title" required placeholder="标题" class="wn-inp text-xl font-semibold" />
+      <div class="grid gap-3 sm:grid-cols-[auto_1fr_1fr]">
+        <input name="date" type="date" value={today} class="wn-inp" />
+        <input name="category" placeholder="分类(如:算法)" class="wn-inp" />
+        <input name="tags" placeholder="标签,逗号分隔" class="wn-inp" />
+      </div>
+      <input name="summary" placeholder="一句话摘要(显示在卡片上,可空)" class="wn-inp" />
+      <textarea name="body" placeholder="## 第一节&#10;&#10;正文用 Markdown 写。支持代码块、$公式$、表格、图片 ./images/xxx.png" class="wn-inp min-h-[18rem] flex-1 resize-none font-mono text-[14px] leading-relaxed"></textarea>
+      <label class="flex items-center gap-2 text-xs text-muted-foreground">
+        <input name="draft" type="checkbox" /> 存为草稿(本地能看,正式发布不包含)
+      </label>
+    </form>
+  </div>
+</div>
+
+<style>
+  .wn-trigger:not(.hidden) { display: inline-flex; }
+  .wn-inp {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    background: var(--card);
+    color: var(--foreground);
+    font-size: 0.9rem;
+    outline: none;
+  }
+  .wn-inp:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+  .wn-inp::placeholder { color: var(--muted-foreground); opacity: 0.8; }
+</style>
+
+<script>
+  const WRITE_URL = '/__dev/write';
+  const open = document.getElementById('wn-open') as HTMLButtonElement | null;
+  const sheet = document.getElementById('wn-sheet')!;
+  const form = document.getElementById('wn-form') as HTMLFormElement;
+  const saveBtn = document.getElementById('wn-save') as HTMLButtonElement;
+  const msg = document.getElementById('wn-msg')!;
+  const pathEl = document.getElementById('wn-path')!;
+  const DRAFT_KEY = 'write-note:draft';
+
+  // Only reveal the entry point if the dev writer is up.
+  (async () => {
+    try {
+      const r = await fetch(WRITE_URL);
+      if (r.ok) {
+        open?.classList.remove('hidden');
+        document.querySelectorAll<HTMLElement>('.wn-open-alias').forEach((el) => el.classList.remove('hidden'));
+      }
+    } catch {}
+  })();
+
+  const safeName = (s: string) => s.replace(/[\\/:*?"<>|\s]+/g, '-').replace(/^-+|-+$/g, '');
+
+  function read() {
+    const f = new FormData(form);
+    const title = String(f.get('title') || '').trim();
+    const date = String(f.get('date') || '');
+    const category = String(f.get('category') || '').trim() || '未分类';
+    const tags = String(f.get('tags') || '').split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+    const summary = String(f.get('summary') || '').trim();
+    const draft = f.get('draft') === 'on';
+    const body = String(f.get('body') || '');
+    return { title, date, category, tags, summary, draft, body };
+  }
+
+  function compose() {
+    const d = read();
+    const fm = [
+      '---',
+      `title: ${d.title}`,
+      `date: ${d.date}`,
+      `category: ${d.category}`,
+      `tags: [${d.tags.join(', ')}]`,
+      d.summary ? `summary: ${d.summary}` : null,
+      'sticky: 0',
+      `draft: ${d.draft}`,
+      '---',
+      '',
+      d.body.trim(),
+      '',
+    ].filter((l) => l !== null).join('\n');
+    const path = `src/content/notes/${d.date}-${safeName(d.title) || '未命名'}.md`;
+    return { path, content: fm, slug: `${d.date}-${safeName(d.title) || '未命名'}` };
+  }
+
+  function show() {
+    sheet.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    // restore an unsaved draft if there is one
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        for (const [k, v] of Object.entries(d)) {
+          const el = form.elements.namedItem(k) as HTMLInputElement | null;
+          if (!el) continue;
+          if (el.type === 'checkbox') el.checked = Boolean(v);
+          else el.value = String(v);
+        }
+      }
+    } catch {}
+    (form.elements.namedItem('title') as HTMLInputElement).focus();
+    updatePath();
+  }
+  function hide() {
+    sheet.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  function updatePath() {
+    pathEl.textContent = compose().path;
+  }
+  function persistDraft() {
+    const d = read();
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch {}
+  }
+
+  open?.addEventListener('click', show);
+  document.querySelectorAll<HTMLElement>('.wn-open-alias').forEach((el) => el.addEventListener('click', show));
+  document.getElementById('wn-close')?.addEventListener('click', hide);
+  document.getElementById('wn-backdrop')?.addEventListener('click', hide);
+  document.addEventListener('keydown', (e) => {
+    if (sheet.classList.contains('hidden')) return;
+    if (e.key === 'Escape') hide();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); }
+  });
+  form.addEventListener('input', () => { updatePath(); persistDraft(); });
+
+  async function save() {
+    const d = read();
+    if (!d.title) { msg.textContent = '先写个标题'; (form.elements.namedItem('title') as HTMLInputElement).focus(); return; }
+    const { path, content, slug } = compose();
+    saveBtn.disabled = true;
+    msg.textContent = '保存中…';
+    try {
+      let r = await fetch(WRITE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, content }) });
+      if (r.status === 409) {
+        if (!confirm('同名笔记已存在,覆盖吗?')) { msg.textContent = ''; saveBtn.disabled = false; return; }
+        r = await fetch(WRITE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, content, overwrite: true }) });
+      }
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || '保存失败');
+      try { localStorage.removeItem(DRAFT_KEY); } catch {}
+      msg.textContent = '已保存,正在打开…';
+      // give the dev server a beat to pick up the new file
+      setTimeout(() => { location.href = `/notes/${slug}/`; }, 600);
+    } catch (e: any) {
+      msg.textContent = '保存失败:' + (e?.message || e);
+      saveBtn.disabled = false;
+    }
+  }
+  saveBtn.addEventListener('click', save);
+</script>
