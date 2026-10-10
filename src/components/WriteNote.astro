@@ -13,10 +13,10 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
 </button>
 
 <!-- ═══ Editor card ═══════════════════════════════════════════════════════ -->
-<div id="wn-sheet" class="fixed inset-0 z-[75] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="写笔记">
-  <div id="wn-backdrop" class="absolute inset-0 bg-[color-mix(in_srgb,var(--background)_70%,transparent)] backdrop-blur-md"></div>
+<div id="wn-sheet" class="wn-overlay hidden" role="dialog" aria-modal="true" aria-label="写笔记">
+  <div id="wn-backdrop" class="wn-backdrop"></div>
 
-  <div class="wn-card card relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden shadow-2xl">
+  <div class="wn-card">
     <!-- header -->
     <header class="flex items-center justify-between gap-3 border-b border-border px-6 py-4">
       <div class="flex items-center gap-3">
@@ -84,9 +84,9 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
 </div>
 
 <!-- ═══ Token card ════════════════════════════════════════════════════════ -->
-<div id="tk-sheet" class="fixed inset-0 z-[80] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="设置 GitHub 令牌">
-  <div id="tk-backdrop" class="absolute inset-0 bg-[color-mix(in_srgb,var(--background)_70%,transparent)] backdrop-blur-md"></div>
-  <div class="card relative w-full max-w-md overflow-hidden shadow-2xl">
+<div id="tk-sheet" class="wn-overlay wn-overlay--top hidden" role="dialog" aria-modal="true" aria-label="设置 GitHub 令牌">
+  <div id="tk-backdrop" class="wn-backdrop"></div>
+  <div class="wn-card wn-card--sm">
     <header class="border-b border-border px-6 py-4">
       <h2 class="text-base font-semibold">在线保存需要一个 GitHub 令牌</h2>
       <p class="mt-1 text-xs text-muted-foreground">只需设置一次,只存在你这台电脑的浏览器里。</p>
@@ -124,9 +124,41 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
 
 <style>
   .wn-trigger:not(.hidden) { display: inline-flex; }
-  #wn-sheet:not(.hidden), #tk-sheet:not(.hidden) { display: flex; }
-
-  .wn-card { animation: wn-in 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+  /* Overlay: pinned to the viewport, centers the card, independent of page scroll. */
+  .wn-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 75;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .wn-overlay--top { z-index: 80; }
+  .wn-overlay.hidden { display: none; }
+  .wn-backdrop {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--background) 72%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .wn-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 48rem;
+    max-height: min(90vh, 56rem);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    background: var(--card);
+    color: var(--card-foreground);
+    box-shadow: 0 30px 80px -24px rgba(27, 34, 44, 0.45), 0 2px 8px rgba(27, 34, 44, 0.08);
+    animation: wn-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .wn-card--sm { max-width: 28rem; }
   @keyframes wn-in { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
 
   .wn-title {
@@ -207,6 +239,10 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
   const $ = (id: string) => document.getElementById(id)!;
   const openBtn = $('wn-open') as HTMLButtonElement;
   const sheet = $('wn-sheet');
+  // The trigger lives in the sticky, backdrop-blurred navbar, which becomes a
+  // containing block for `position: fixed`. Move both overlays to <body> so
+  // they pin to the viewport regardless of where the component was rendered.
+  document.body.append(sheet, $('tk-sheet'));
   const form = $('wn-form') as HTMLFormElement;
   const saveBtn = $('wn-save') as HTMLButtonElement;
   const delBtn = $('wn-delete') as HTMLButtonElement;
