@@ -1,0 +1,8 @@
+{
+  "note": "首页便利贴。改这里可以改默认内容;平时在网站上直接点着改即可(会存在浏览器本地,点同步后写回这里)。",
+  "stickies": [
+    { "id": "s1", "text": "慢一点,但别停。", "color": "sky", "createdAt": 1 },
+    { "id": "s2", "text": "今天搞懂的那个东西,写下来才算真懂。", "color": "lavender", "createdAt": 2 },
+    { "id": "s3", "text": "不会的地方,正是要写下来的地方。", "color": "meadow", "createdAt": 3 }
+  ]
+}

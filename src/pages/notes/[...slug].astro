@@ -10,7 +10,6 @@ import LikeButton from '../../components/LikeButton.astro';
 import Giscus from '../../components/Giscus.astro';
 import ReadingProgress from '../../components/ReadingProgress.astro';
 import PostCard from '../../components/PostCard.astro';
-import EditNote from '../../components/EditNote.astro';
 import { INTERACTIONS } from '../../lib/site';
 import {
   getNotes,
@@ -50,7 +49,10 @@ const minutes = readingMinutes(note.body);
           <a href={withBase("/")} class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
             ← 返回首页
           </a>
-          <EditNote noteId={note.id} />
+          <button type="button" class="nb-continue chip hidden items-center gap-1" data-slug={note.id}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            继续写
+          </button>
         </div>
         <div class="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <a href={withBase(`/category/${slugify(category)}/`)} class="rounded-md bg-muted px-2 py-0.5 hover:text-primary">{category}</a>

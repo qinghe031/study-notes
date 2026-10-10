@@ -1,9 +1,9 @@
 {
-  "title": "学习笔记",
-  "description": "我的学习经验与笔记整理,本地写作,静态分享。",
+  "title": "我的本子",
+  "description": "把想到的写出来,慢慢补成一本书。",
   "author": "我",
-  "slogan": "把学到的东西,写成能再读一遍的样子。",
-  "footer": "本站内容本地编写 · 静态构建 · 可离线查看",
+  "slogan": "把想到的写出来吧。",
+  "footer": "随手写,慢慢改 · 本地写作,想发才发",
   "postsPerPage": 10,
   "github": {
     "owner": "qinghe031",

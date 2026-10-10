@@ -9,6 +9,7 @@ import ScrollToTop from '../components/ScrollToTop.astro';
 import LightDust from '../components/LightDust.astro';
 import Mascot from '../components/Mascot.astro';
 import FocusClock from '../components/FocusClock.astro';
+import Notebook from '../components/Notebook.astro';
 import { SITE } from '../lib/site';
 
 interface Props {
@@ -60,6 +61,35 @@ const fullTitle = title ? `${title} · ${SITE.title}` : SITE.title;
     <ScrollToTop />
     <Mascot />
     <FocusClock autoStart={autoFocus} />
+    <Notebook />
+
+    <script>
+      // Owner-only entry points. Shown when: running locally (dev writer), a
+      // GitHub token is saved, or the local notebook has content. Visitors on
+      // the hosted site see none of this.
+      import { getToken } from '../lib/github';
+      import { load } from '../lib/notebook';
+      (async () => {
+        let owner = Boolean(getToken()) || Object.keys(load().notes).length > 0;
+        if (!owner) { try { owner = (await fetch('/__dev/write', { cache: 'no-store' })).ok; } catch {} }
+        // Always allow the owner to *start* on the hosted site: a hidden
+        // keyboard shortcut (press "w" twice) reveals the buttons once.
+        const reveal = () => document.querySelectorAll<HTMLElement>('#nav-write, .nb-open, .nb-owner, .nb-continue').forEach((e) => e.classList.remove('hidden'));
+        if (owner) reveal();
+        let lastW = 0;
+        document.addEventListener('keydown', (e) => {
+          if (e.key !== 'w' || (e.target as HTMLElement)?.tagName?.match(/INPUT|TEXTAREA/)) return;
+          const now = Date.now();
+          if (now - lastW < 400) { reveal(); try { localStorage.setItem('notebook:owner', '1'); } catch {} }
+          lastW = now;
+        });
+        try { if (localStorage.getItem('notebook:owner')) reveal(); } catch {}
+        const nb = () => (window as any).__notebook;
+        document.getElementById('nav-write')?.addEventListener('click', () => nb()?.openList());
+        document.querySelectorAll<HTMLElement>('.nb-open').forEach((b) => b.addEventListener('click', () => nb()?.open()));
+        document.querySelectorAll<HTMLElement>('.nb-continue').forEach((b) => b.addEventListener('click', () => nb()?.open(b.dataset.slug)));
+      })();
+    </script>
 
     <script>
       // Reveal-on-scroll: elements with .reveal animate in when they enter the viewport.

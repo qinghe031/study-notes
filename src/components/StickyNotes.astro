@@ -1,0 +1,131 @@
+---
+// 便利贴 — short lines you write to yourself, pinned on the homepage.
+// Rendered from the published JSON for visitors; for the owner they become
+// editable in place (local-first, synced with the notebook).
+import { STICKIES } from '../lib/site';
+const seed = JSON.stringify(STICKIES);
+const tilt = (i: number) => [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2][i % 6];
+---
+
+<section id="stickies" class="reveal" data-seed={seed}>
+  <header class="mb-3 flex items-end justify-between">
+    <div>
+      <p class="text-xs uppercase tracking-[0.2em] text-muted-foreground">Sticky notes</p>
+      <h2 class="text-lg font-semibold tracking-tight">给自己的话</h2>
+    </div>
+    <button type="button" id="sticky-add" class="nb-owner chip hidden">+ 贴一张</button>
+  </header>
+  <div id="sticky-grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {
+      STICKIES.map((s, i) => (
+        <article class="sticky-note" data-id={s.id} data-color={s.color} style={`--tilt:${tilt(i)}deg`}>
+          <span class="pin" aria-hidden="true" />
+          <p class="sticky-text">{s.text}</p>
+        </article>
+      ))
+    }
+  </div>
+  <p id="sticky-empty" class:list={['py-6 text-center text-sm text-muted-foreground', STICKIES.length && 'hidden']}>还没贴东西。</p>
+</section>
+
+<style>
+  .sticky-note {
+    position: relative;
+    padding: 1.1rem 1.2rem 1rem;
+    border-radius: 0.4rem;
+    color: #3f4854;
+    background: var(--note, #dfeaf3);
+    transform: rotate(var(--tilt, 0deg));
+    box-shadow: 0 1px 2px rgba(63, 72, 84, 0.08), 0 14px 28px -16px rgba(63, 72, 84, 0.35);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+    font-family: "Segoe Print", "KaiTi", "STKaiti", "Noto Serif SC", serif;
+  }
+  .sticky-note:hover { transform: rotate(0deg) translateY(-4px) scale(1.02); z-index: 2; }
+  .sticky-note[data-color="sky"]      { --note: #dfeaf3; --note-dark: #2b3b4c; }
+  .sticky-note[data-color="dawn"]     { --note: #f3e8d2; --note-dark: #4a3f2c; }
+  .sticky-note[data-color="lavender"] { --note: #e8e2f1; --note-dark: #3d3550; }
+  .sticky-note[data-color="meadow"]   { --note: #e2ecdf; --note-dark: #2f4030; }
+  .sticky-note[data-color="blossom"]  { --note: #f3e1e5; --note-dark: #4c333a; }
+  .sticky-note[data-color="lagoon"]   { --note: #dfedec; --note-dark: #2c4442; }
+  .sticky-note[data-color="peach"]    { --note: #f4e5d9; --note-dark: #4b3a2d; }
+  .sticky-note[data-color="mist"]     { --note: #e8eaed; --note-dark: #343a42; }
+  :global(html.dark) .sticky-note { background: var(--note-dark); color: #e7e5e0; }
+  .pin {
+    position: absolute; top: -6px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff 0%, var(--primary) 45%, color-mix(in srgb, var(--primary) 70%, #000) 100%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  }
+  .sticky-text { font-size: 15px; line-height: 1.7; white-space: pre-line; min-height: 2.5em; outline: none; }
+  .sticky-text[contenteditable="true"]:focus { box-shadow: inset 0 -2px 0 var(--primary); }
+  .sticky-tools { position: absolute; right: 0.5rem; top: 0.5rem; display: none; gap: 0.25rem; }
+  .sticky-note.owner:hover .sticky-tools { display: flex; }
+  .sticky-tools button { width: 1.5rem; height: 1.5rem; border-radius: 999px; background: rgba(255, 255, 255, 0.6); font-size: 0.75rem; color: #3f4854; }
+  .sticky-tools button:hover { background: #fff; }
+  :global(html.dark) .sticky-tools button { background: rgba(0, 0, 0, 0.3); color: #e7e5e0; }
+  .sticky-swatches { display: flex; gap: 0.3rem; margin-top: 0.6rem; }
+  .sticky-swatches button { width: 0.9rem; height: 0.9rem; border-radius: 999px; border: 1px solid rgba(0,0,0,0.15); }
+  .sticky-swatches button[aria-pressed="true"] { outline: 2px solid var(--primary); outline-offset: 1px; }
+</style>
+
+<script>
+  import { load, setStickies, seedMisc, uid, type Sticky } from '../lib/notebook';
+
+  const root = document.getElementById('stickies')!;
+  const grid = document.getElementById('sticky-grid')!;
+  const empty = document.getElementById('sticky-empty')!;
+  const addBtn = document.getElementById('sticky-add') as HTMLButtonElement;
+  const COLORS = ['sky', 'dawn', 'lavender', 'meadow', 'blossom', 'lagoon', 'peach', 'mist'];
+  const SW: Record<string, string> = { sky: '#7fa8c9', dawn: '#c9a870', lavender: '#a99fcb', meadow: '#93b490', blossom: '#d6a5b0', lagoon: '#85b3b1', peach: '#d6a680', mist: '#939aa3' };
+  const tilt = (i: number) => [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2][i % 6];
+
+  // Owner? (same rule as BaseLayout). Visitors keep the server-rendered notes.
+  const isOwner = () => { try { return Boolean(localStorage.getItem('gh:token') || localStorage.getItem('notebook:owner') || Object.keys(JSON.parse(localStorage.getItem('notebook:v1') || '{}').notes || {}).length); } catch { return false; } };
+
+  function render() {
+    const list = load().stickies;
+    grid.innerHTML = '';
+    empty.classList.toggle('hidden', list.length > 0);
+    list.forEach((s, i) => {
+      const a = document.createElement('article');
+      a.className = 'sticky-note owner'; a.dataset.id = s.id; a.dataset.color = s.color; a.style.setProperty('--tilt', tilt(i) + 'deg');
+      a.innerHTML = `<span class="pin" aria-hidden="true"></span>
+        <div class="sticky-tools"><button type="button" data-del title="撕掉">✕</button></div>
+        <p class="sticky-text" contenteditable="true" spellcheck="false"></p>
+        <div class="sticky-swatches">${COLORS.map((c) => `<button type="button" data-color="${c}" style="background:${SW[c]}" aria-pressed="${c === s.color}" title="${c}"></button>`).join('')}</div>`;
+      (a.querySelector('.sticky-text') as HTMLElement).textContent = s.text;
+      grid.appendChild(a);
+    });
+  }
+
+  function commit() {
+    const list: Sticky[] = Array.from(grid.querySelectorAll<HTMLElement>('.sticky-note')).map((a) => ({
+      id: a.dataset.id!, color: a.dataset.color || 'sky',
+      text: (a.querySelector('.sticky-text') as HTMLElement).textContent?.trim() || '',
+      createdAt: Number(a.dataset.created || Date.now()),
+    })).filter((s) => s.text);
+    setStickies(list);
+  }
+
+  if (isOwner()) {
+    seedMisc(JSON.parse(root.dataset.seed || '[]'), []);
+    render();
+    addBtn.classList.remove('hidden');
+    addBtn.onclick = () => {
+      const list = load().stickies;
+      list.unshift({ id: uid(), text: '', color: COLORS[list.length % COLORS.length], createdAt: Date.now() });
+      setStickies(list); render();
+      (grid.querySelector('.sticky-text') as HTMLElement)?.focus();
+    };
+    let t = 0;
+    grid.addEventListener('input', () => { clearTimeout(t); t = window.setTimeout(commit, 400); });
+    grid.addEventListener('focusout', commit);
+    grid.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest('button'); if (!b) return;
+      const a = b.closest<HTMLElement>('.sticky-note')!;
+      if (b.hasAttribute('data-del')) { if (confirm('撕掉这张?')) { a.remove(); commit(); render(); } return; }
+      if (b.dataset.color) { a.dataset.color = b.dataset.color; a.querySelectorAll('.sticky-swatches button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); commit(); }
+    });
+    // Enter = new line is fine; Escape blurs.
+    grid.addEventListener('keydown', (e) => { if (e.key === 'Escape') (e.target as HTMLElement).blur(); });
+  }
+</script>

@@ -1,0 +1,403 @@
+---
+// The notebook. Open it, write, close it — everything autosaves locally as you
+// type. Reopen a note to continue. "同步" is a separate, deliberate step that
+// publishes to GitHub; until then nothing is public.
+//
+// Mounted once in BaseLayout. Other components call window.__notebook.open(slug?).
+import { getNotes, getCategories } from '../lib/content';
+const categories = getCategories(await getNotes()).map((c) => c.name);
+---
+
+<!-- ═══ Editor ════════════════════════════════════════════════════════════ -->
+<div id="nb-sheet" class="nb-overlay hidden" role="dialog" aria-modal="true" aria-label="笔记本">
+  <div id="nb-backdrop" class="nb-backdrop"></div>
+
+  <div class="nb-card">
+    <header class="nb-head">
+      <div class="flex min-w-0 items-center gap-3">
+        <span class="nb-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </span>
+        <div class="min-w-0">
+          <h2 class="text-base font-semibold leading-tight">笔记本</h2>
+          <p id="nb-state" class="truncate text-xs text-muted-foreground">新的一页</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button id="nb-sync" type="button" class="nb-primary hidden" title="把这篇发布到网站">同步到网站</button>
+        <button id="nb-close" type="button" aria-label="合上" class="nb-iconbtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <form id="nb-form" class="nb-body" autocomplete="off">
+      <input name="title" placeholder="今天想写点什么" class="nb-title" />
+
+      <div class="nb-meta">
+        <input name="date" type="date" title="日期" />
+        <input name="category" placeholder="分类" list="nb-cats" />
+        <input name="tags" placeholder="标签,逗号分隔" />
+      </div>
+
+      <textarea name="body" placeholder="随便写。想到哪写到哪,下次打开接着写。&#10;&#10;支持 Markdown:## 标题、- 列表、`代码`、$公式$、![图](./images/x.png)"></textarea>
+
+      <details class="nb-more">
+        <summary>更多</summary>
+        <div class="mt-3 space-y-3">
+          <input name="summary" placeholder="一句话摘要(显示在卡片上,可空)" class="nb-inp" />
+          <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+            <label class="inline-flex cursor-pointer items-center gap-2"><input name="draft" type="checkbox" class="nb-check" /> 草稿(同步后也不公开)</label>
+            <label class="inline-flex items-center gap-2">置顶 <input name="sticky" type="number" min="0" value="0" class="nb-mini" /></label>
+            <span id="nb-slug" class="ml-auto font-mono text-[11px] opacity-60"></span>
+          </div>
+        </div>
+      </details>
+    </form>
+
+    <footer class="nb-foot">
+      <div class="flex items-center gap-1">
+        <button id="nb-delete" type="button" class="nb-ghost nb-danger hidden">删除</button>
+        <button id="nb-list" type="button" class="nb-ghost">本子里的其他页</button>
+      </div>
+      <p id="nb-saved" class="text-xs text-muted-foreground"></p>
+    </footer>
+  </div>
+</div>
+
+<!-- ═══ Notes list (本子里的其他页) ═══════════════════════════════════════ -->
+<div id="nb-list-sheet" class="nb-overlay hidden" role="dialog" aria-modal="true" aria-label="本子里的页">
+  <div id="nb-list-backdrop" class="nb-backdrop"></div>
+  <div class="nb-card nb-card--sm">
+    <header class="nb-head">
+      <div>
+        <h2 class="text-base font-semibold">本子里的页</h2>
+        <p id="nb-list-sub" class="text-xs text-muted-foreground"></p>
+      </div>
+      <button id="nb-list-close" type="button" aria-label="关闭" class="nb-iconbtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+    <div id="nb-list-body" class="max-h-[60vh] overflow-y-auto px-2 py-2"></div>
+    <footer class="nb-foot">
+      <button id="nb-new" type="button" class="nb-ghost">+ 新的一页</button>
+      <button id="nb-sync-all" type="button" class="nb-primary hidden">同步全部</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ═══ Token ═════════════════════════════════════════════════════════════ -->
+<div id="tk-sheet" class="nb-overlay nb-overlay--top hidden" role="dialog" aria-modal="true" aria-label="设置 GitHub 令牌">
+  <div id="tk-backdrop" class="nb-backdrop"></div>
+  <div class="nb-card nb-card--sm">
+    <header class="nb-head">
+      <div>
+        <h2 class="text-base font-semibold">同步到网站需要一个 GitHub 令牌</h2>
+        <p class="text-xs text-muted-foreground">只需设置一次,只存在你这台电脑的浏览器里。</p>
+      </div>
+    </header>
+    <div class="space-y-4 px-6 py-5 text-sm">
+      <ol class="space-y-2.5 text-muted-foreground">
+        <li class="flex gap-3"><span class="nb-step">1</span><span>点下面的按钮打开 GitHub 生成页(新标签页)。</span></li>
+        <li class="flex gap-3"><span class="nb-step">2</span><span><b class="text-foreground">Repository access</b> 选 Only select repositories → 勾 <code id="tk-repo" class="rounded bg-muted px-1"></code></span></li>
+        <li class="flex gap-3"><span class="nb-step">3</span><span><b class="text-foreground">Permissions → Contents</b> 选 <b class="text-foreground">Read and write</b>,然后 Generate token</span></li>
+        <li class="flex gap-3"><span class="nb-step">4</span><span>复制令牌,回到这里粘贴。</span></li>
+      </ol>
+      <a id="tk-link" href="#" target="_blank" rel="noopener" class="nb-primary inline-flex w-full justify-center gap-2">
+        打开 GitHub 令牌生成页
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
+      </a>
+      <input id="tk-input" type="password" placeholder="粘贴令牌:github_pat_… 或 ghp_…" autocomplete="off" spellcheck="false" class="nb-inp" />
+      <p id="tk-msg" class="min-h-[1.2em] text-xs text-muted-foreground"></p>
+    </div>
+    <footer class="nb-foot">
+      <button id="tk-clear" type="button" class="nb-ghost">清除已保存的令牌</button>
+      <div class="flex gap-2">
+        <button id="tk-cancel" type="button" class="nb-ghost">取消</button>
+        <button id="tk-ok" type="button" class="nb-primary">验证并保存</button>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<datalist id="nb-cats">{categories.map((c) => <option value={c} />)}</datalist>
+
+<style>
+  .nb-overlay { position: fixed; inset: 0; z-index: 75; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .nb-overlay--top { z-index: 80; }
+  .nb-overlay.hidden { display: none; }
+  .nb-backdrop { position: absolute; inset: 0; background: color-mix(in srgb, var(--background) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .nb-card {
+    position: relative; display: flex; flex-direction: column;
+    width: 100%; max-width: 46rem; max-height: min(92vh, 60rem); overflow: hidden;
+    border: 1px solid var(--border); border-radius: 1.25rem;
+    background: var(--card); color: var(--card-foreground);
+    box-shadow: 0 30px 80px -24px rgba(27, 34, 44, 0.45), 0 2px 8px rgba(27, 34, 44, 0.08);
+    animation: nb-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nb-card--sm { max-width: 28rem; }
+  @keyframes nb-in { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+  .nb-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
+  .nb-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1.5rem; border-top: 1px solid var(--border); }
+  .nb-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 0.75rem; background: color-mix(in srgb, var(--primary) 14%, transparent); }
+  .nb-iconbtn { padding: 0.5rem; border-radius: 0.5rem; color: var(--muted-foreground); }
+  .nb-iconbtn:hover { background: var(--muted); color: var(--foreground); }
+
+  .nb-body { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; }
+  .nb-title {
+    width: 100%; padding: 0.3rem 0; border: 0; border-bottom: 2px solid var(--border);
+    background: transparent; color: var(--foreground); font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; outline: none;
+    transition: border-color 0.2s;
+  }
+  .nb-title:focus { border-bottom-color: var(--primary); }
+  .nb-title::placeholder { color: var(--muted-foreground); opacity: 0.55; font-weight: 500; }
+
+  .nb-meta { display: grid; grid-template-columns: auto 1fr 1fr; gap: 0.5rem; }
+  .nb-meta input, .nb-inp, .nb-mini {
+    padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 0.65rem;
+    background: var(--background); color: var(--foreground); font-size: 0.85rem; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .nb-inp { width: 100%; }
+  .nb-mini { width: 3.5rem; padding: 0.25rem 0.4rem; text-align: center; }
+  .nb-meta input:focus, .nb-inp:focus, .nb-mini:focus, .nb-body textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
+  .nb-meta input::placeholder, .nb-inp::placeholder, .nb-body textarea::placeholder { color: var(--muted-foreground); opacity: 0.55; }
+
+  .nb-body textarea {
+    flex: 1; min-height: 16rem; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 0.85rem;
+    background: var(--background); color: var(--foreground); outline: none; resize: vertical;
+    font-family: var(--font-mono); font-size: 0.9rem; line-height: 1.8;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .nb-more summary { cursor: pointer; font-size: 0.75rem; color: var(--muted-foreground); user-select: none; }
+  .nb-more summary:hover { color: var(--foreground); }
+  .nb-check { accent-color: var(--primary); width: 0.95rem; height: 0.95rem; }
+
+  .nb-primary { padding: 0.5rem 1rem; border-radius: 0.7rem; background: var(--primary); color: var(--primary-foreground); font-size: 0.85rem; font-weight: 600; transition: opacity 0.15s, transform 0.15s; }
+  .nb-primary:hover { opacity: 0.92; }
+  .nb-primary:active { transform: scale(0.98); }
+  .nb-primary:disabled { opacity: 0.5; cursor: wait; }
+  .nb-primary.hidden { display: none; }
+  .nb-ghost { padding: 0.45rem 0.7rem; border-radius: 0.6rem; font-size: 0.8rem; color: var(--muted-foreground); transition: background-color 0.15s, color 0.15s; }
+  .nb-ghost:hover { background: var(--muted); color: var(--foreground); }
+  .nb-ghost.hidden { display: none; }
+  .nb-danger { color: #c7303c; }
+  .nb-danger:hover { background: color-mix(in srgb, #c7303c 12%, transparent); color: #c7303c; }
+  .nb-step { display: grid; place-items: center; flex-shrink: 0; width: 1.4rem; height: 1.4rem; border-radius: 999px; background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary); font-size: 0.7rem; font-weight: 700; }
+
+  /* list rows */
+  .nb-row { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.6rem 0.9rem; border-radius: 0.7rem; text-align: left; transition: background-color 0.15s; }
+  .nb-row:hover { background: var(--muted); }
+  .nb-row .t { flex: 1; min-width: 0; }
+  .nb-row .t b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nb-row .t small { color: var(--muted-foreground); font-size: 0.72rem; }
+  .nb-dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; flex-shrink: 0; }
+  .nb-dot.dirty { background: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent); }
+  .nb-dot.clean { background: var(--border); }
+
+  @media (max-width: 640px) { .nb-meta { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { .nb-card { animation: none; } }
+</style>
+
+<script>
+  import { load, getNote, upsertNote, removeNote, isDirty, slugify, today, ago, pending, fromMarkdown, toMarkdown, type NoteDraft } from '../lib/notebook';
+  import { syncNote, syncAll, deleteNoteRemote } from '../lib/sync';
+  import { getToken, setToken, verifyToken, getFile, newTokenUrl, GH, actionsUrl } from '../lib/github';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+  const DEV_URL = '/__dev/write';
+  let devMode = false;
+  fetch(DEV_URL, { cache: 'no-store' }).then((r) => (devMode = r.ok)).catch(() => {});
+
+  // Overlays live in BaseLayout, but hoist them to <body> anyway so no
+  // ancestor with transform/filter can trap position:fixed.
+  const sheet = $('nb-sheet'), listSheet = $('nb-list-sheet'), tk = $('tk-sheet');
+  document.body.append(sheet, listSheet, tk);
+
+  const form = $('nb-form') as HTMLFormElement;
+  const el = (n: string) => form.elements.namedItem(n) as HTMLInputElement;
+  const bodyEl = form.elements.namedItem('body') as HTMLTextAreaElement;
+  const stateEl = $('nb-state'), savedEl = $('nb-saved'), slugEl = $('nb-slug');
+  const syncBtn = $('nb-sync') as HTMLButtonElement, delBtn = $('nb-delete') as HTMLButtonElement;
+
+  let cur: NoteDraft | null = null;
+  let saveTimer = 0;
+
+  /* ── token ──────────────────────────────────────────────────────────── */
+  ($('tk-link') as HTMLAnchorElement).href = newTokenUrl();
+  $('tk-repo').textContent = `${GH.owner}/${GH.repo}`;
+  const tkInput = $('tk-input') as HTMLInputElement, tkMsg = $('tk-msg');
+  let tkResolve: ((ok: boolean) => void) | null = null;
+  function askToken(): Promise<boolean> {
+    tkInput.value = ''; tkMsg.textContent = getToken() ? '已有一个令牌,粘贴新的可替换。' : '';
+    tk.classList.remove('hidden'); setTimeout(() => tkInput.focus(), 50);
+    return new Promise((r) => (tkResolve = r));
+  }
+  const closeToken = (ok: boolean) => { tk.classList.add('hidden'); tkResolve?.(ok); tkResolve = null; };
+  $('tk-cancel').onclick = () => closeToken(false);
+  $('tk-backdrop').onclick = () => closeToken(false);
+  $('tk-clear').onclick = () => { setToken(''); tkMsg.textContent = '已清除。'; };
+  $('tk-ok').onclick = async () => {
+    const t = tkInput.value.trim(); if (!t) { tkMsg.textContent = '先粘贴令牌。'; return; }
+    tkMsg.textContent = '验证中…';
+    const v = await verifyToken(t);
+    if (!v.ok) { tkMsg.textContent = '✗ ' + (v.error || '验证失败'); return; }
+    setToken(t); tkMsg.textContent = `✓ 已验证,登录为 ${v.login}`; setTimeout(() => closeToken(true), 500);
+  };
+  tkInput.onkeydown = (e) => { if (e.key === 'Enter') $('tk-ok').click(); };
+  async function ensureToken() { const t = getToken(); if (t && (await verifyToken(t)).ok) return true; return askToken(); }
+
+  /* ── read / write form ──────────────────────────────────────────────── */
+  function readForm(): NoteDraft {
+    const title = el('title').value.trim();
+    const date = el('date').value || today();
+    const base: NoteDraft = cur || { slug: '', title: '', date, category: '', tags: [], summary: '', sticky: 0, draft: false, body: '', updatedAt: 0 };
+    return {
+      ...base,
+      slug: base.slug || slugify(title || '未命名', date),
+      title, date,
+      category: el('category').value.trim(),
+      tags: el('tags').value.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+      summary: el('summary').value.trim(),
+      sticky: Number(el('sticky').value || 0) || 0,
+      draft: (el('draft') as HTMLInputElement).checked,
+      body: bodyEl.value,
+    };
+  }
+  function fillForm(n: NoteDraft | null) {
+    form.reset();
+    el('date').value = n?.date || today();
+    if (!n) { bodyEl.value = ''; return; }
+    el('title').value = n.title; el('category').value = n.category; el('tags').value = n.tags.join(', ');
+    el('summary').value = n.summary; el('sticky').value = String(n.sticky || 0);
+    (el('draft') as HTMLInputElement).checked = n.draft; bodyEl.value = n.body;
+  }
+  function refreshState() {
+    if (!cur) { stateEl.textContent = '新的一页'; syncBtn.classList.add('hidden'); delBtn.classList.add('hidden'); slugEl.textContent = ''; return; }
+    const dirty = isDirty(cur);
+    slugEl.textContent = cur.slug + '.md';
+    delBtn.classList.remove('hidden');
+    if (devMode) { stateEl.textContent = '本地模式 · 保存即生效'; syncBtn.classList.add('hidden'); return; }
+    syncBtn.classList.toggle('hidden', !dirty);
+    stateEl.textContent = cur.syncedAt ? (dirty ? `有未同步的修改 · 上次同步 ${ago(cur.syncedAt)}` : `已同步 · ${ago(cur.syncedAt)}`) : '只在本地,还没同步到网站';
+  }
+
+  /* ── autosave ───────────────────────────────────────────────────────── */
+  function autosave() {
+    const n = readForm();
+    if (!n.title && !n.body.trim()) return; // nothing worth keeping yet
+    cur = upsertNote(n);
+    savedEl.textContent = `已存到本地 · ${ago(cur.updatedAt)}`;
+    refreshState();
+    if (devMode) devWrite(cur);
+  }
+  form.addEventListener('input', () => { clearTimeout(saveTimer); saveTimer = window.setTimeout(autosave, 400); });
+  let devTimer = 0;
+  function devWrite(n: NoteDraft) {
+    clearTimeout(devTimer);
+    devTimer = window.setTimeout(async () => {
+      try {
+        await fetch(DEV_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: `src/content/notes/${n.slug}.md`, content: toMarkdown(n), overwrite: true }),
+        });
+      } catch {}
+    }, 800);
+  }
+
+  /* ── open / close ───────────────────────────────────────────────────── */
+  async function open(slug?: string) {
+    cur = null;
+    if (slug) {
+      cur = getNote(slug);
+      if (!cur) {
+        // Not in the local notebook yet: pull from dev server or GitHub so you can continue it.
+        stateEl.textContent = '正在从网站取回这一页…';
+        try {
+          let md: string | null = null, sha: string | undefined;
+          if (devMode) { const r = await fetch(`/__dev/read?path=src/content/notes/${encodeURIComponent(slug)}.md`); if (r.ok) md = (await r.json()).content; }
+          if (md == null && getToken()) { const f = await getFile(`src/content/notes/${slug}.md`); if (f) { md = f.content; sha = f.sha; } }
+          if (md == null) { const r = await fetch(`https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.branch}/src/content/notes/${encodeURIComponent(slug)}.md`); if (r.ok) md = await r.text(); }
+          if (md != null) { cur = fromMarkdown(slug, md, sha); upsertNote(cur); }
+        } catch {}
+      }
+    }
+    fillForm(cur);
+    savedEl.textContent = cur ? `上次改动 ${ago(cur.updatedAt)}` : '';
+    refreshState();
+    sheet.classList.remove('hidden'); document.body.style.overflow = 'hidden';
+    setTimeout(() => (cur?.body ? bodyEl : el('title')).focus(), 60);
+  }
+  function close() { clearTimeout(saveTimer); autosave(); sheet.classList.add('hidden'); document.body.style.overflow = ''; }
+  $('nb-close').onclick = close; $('nb-backdrop').onclick = close;
+  document.addEventListener('keydown', (e) => {
+    if (!tk.classList.contains('hidden')) { if (e.key === 'Escape') closeToken(false); return; }
+    if (!listSheet.classList.contains('hidden')) { if (e.key === 'Escape') closeList(); return; }
+    if (sheet.classList.contains('hidden')) return;
+    if (e.key === 'Escape') close();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); autosave(); savedEl.textContent = '已存到本地 ✓'; }
+  });
+
+  /* ── sync one ───────────────────────────────────────────────────────── */
+  syncBtn.onclick = async () => {
+    clearTimeout(saveTimer); autosave(); if (!cur) return;
+    if (!(await ensureToken())) return;
+    syncBtn.disabled = true; stateEl.textContent = '正在同步…';
+    try { await syncNote(cur); cur = getNote(cur.slug); refreshState(); stateEl.textContent = '已同步 ✓ 约 1~2 分钟后网站更新'; }
+    catch (e: any) { stateEl.textContent = '✗ ' + (e?.message || e); }
+    finally { syncBtn.disabled = false; }
+  };
+
+  /* ── delete ─────────────────────────────────────────────────────────── */
+  delBtn.onclick = async () => {
+    if (!cur) return;
+    const wasSynced = Boolean(cur.syncedAt || cur.sha);
+    if (!confirm(`撕掉这一页「${cur.title || cur.slug}」?${wasSynced ? '\n网站上的版本会在下次同步时一并删除。' : ''}`)) return;
+    const slug = cur.slug;
+    removeNote(slug);
+    if (devMode) { try { await fetch('/__dev/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: `src/content/notes/${slug}.md` }) }); } catch {} }
+    else if (wasSynced && getToken()) { try { await deleteNoteRemote(slug); } catch {} }
+    cur = null; sheet.classList.add('hidden'); document.body.style.overflow = '';
+    if (location.pathname.includes(`/notes/${encodeURIComponent(slug)}`) || location.pathname.includes(`/notes/${slug}`)) location.href = BASE + '/';
+    else window.dispatchEvent(new CustomEvent('notebook:change'));
+  };
+
+  /* ── list ───────────────────────────────────────────────────────────── */
+  function renderList() {
+    const nb = load();
+    const notes = Object.values(nb.notes).sort((a, b) => b.updatedAt - a.updatedAt);
+    const p = pending();
+    $('nb-list-sub').textContent = notes.length ? `${notes.length} 页 · ${p.count ? p.count + ' 项待同步' : '全部已同步'}` : '还是空的';
+    ($('nb-sync-all') as HTMLButtonElement).classList.toggle('hidden', devMode || p.count === 0);
+    const body = $('nb-list-body');
+    body.innerHTML = notes.length ? '' : '<p class="px-4 py-8 text-center text-sm text-muted-foreground">翻开新的一页开始写吧。</p>';
+    for (const n of notes) {
+      const dirty = isDirty(n);
+      const row = document.createElement('button');
+      row.type = 'button'; row.className = 'nb-row';
+      row.innerHTML = `<span class="nb-dot ${dirty ? 'dirty' : 'clean'}" title="${dirty ? '有未同步的修改' : '已同步'}"></span><span class="t"><b>${esc(n.title || '(无标题)')}</b><small>${n.date} · 改于 ${ago(n.updatedAt)}${n.draft ? ' · 草稿' : ''}</small></span>`;
+      row.onclick = () => { closeList(); open(n.slug); };
+      body.appendChild(row);
+    }
+  }
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  function openList() { renderList(); listSheet.classList.remove('hidden'); }
+  function closeList() { listSheet.classList.add('hidden'); }
+  $('nb-list').onclick = () => { clearTimeout(saveTimer); autosave(); openList(); };
+  $('nb-list-close').onclick = closeList; $('nb-list-backdrop').onclick = closeList;
+  $('nb-new').onclick = () => { closeList(); open(); };
+  $('nb-sync-all').onclick = async () => {
+    if (!(await ensureToken())) return;
+    const b = $('nb-sync-all') as HTMLButtonElement; b.disabled = true; b.textContent = '同步中…';
+    const r = await syncAll();
+    b.disabled = false; b.textContent = '同步全部';
+    renderList();
+    $('nb-list-sub').textContent = r.ok ? `已同步 ${r.pushed} 项${r.deleted ? `,删除 ${r.deleted} 项` : ''} · 约 1~2 分钟后网站更新` : '部分失败:' + r.errors.join(';');
+    if (r.ok && r.pushed + r.deleted > 0) setTimeout(() => window.open(actionsUrl(), '_blank'), 600);
+  };
+
+  (window as any).__notebook = { open, openList };
+</script>

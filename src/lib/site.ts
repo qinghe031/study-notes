@@ -3,6 +3,8 @@ import galleryData from '../data/gallery.json';
 import nowPlayingData from '../data/now-playing.json';
 import guestbookData from '../data/guestbook.json';
 import interactions from '../data/interactions.json';
+import stickiesData from '../data/stickies.json';
+import countdownsData from '../data/countdowns.json';
 
 export interface NavItem {
   label: string;
@@ -35,6 +37,12 @@ const NAV: NavItem[] = [
 
 export const SITE: SiteConfig = { ...(site as SiteConfig) };
 export const SITE_NAV = NAV;
+
+/* ── 便利贴 / 倒计时(发布版默认值;本地可改,同步后写回) ──────────── */
+export interface StickyNote { id: string; text: string; color: string; createdAt: number }
+export interface Countdown { id: string; label: string; date: string }
+export const STICKIES: StickyNote[] = (stickiesData.stickies || []) as StickyNote[];
+export const COUNTDOWNS: Countdown[] = (countdownsData.countdowns || []) as Countdown[];
 
 export const THEMES = [
   { id: 'sky', label: '云蓝', swatch: '#7fa8c9' },

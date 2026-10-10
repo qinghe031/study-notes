@@ -4,6 +4,7 @@ import Hero from '../components/Hero.astro';
 import PostCard from '../components/PostCard.astro';
 import Turntable from '../components/Turntable.astro';
 import FocusToday from '../components/FocusToday.astro';
+import StickyNotes from '../components/StickyNotes.astro';
 import TagsCloudCard from '../components/TagsCloudCard.astro';
 import CategoriesCard from '../components/CategoriesCard.astro';
 import RecentPostsCard from '../components/RecentPostsCard.astro';
@@ -19,22 +20,26 @@ const total = Math.max(1, Math.ceil(notes.length / SITE.postsPerPage));
 ---
 
 <BaseLayout>
-  <Hero />
+  <Hero countdowns />
 
   <div class="mb-10">
     <Turntable />
+  </div>
+
+  <div class="mb-10">
+    <StickyNotes />
   </div>
 
   <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
     <section class="space-y-5">
       <FocusToday />
       <div class="flex items-center justify-between">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">最新笔记</h2>
-        <button type="button" class="wn-open-alias chip hidden items-center gap-1 text-xs">✎ 写一篇</button>
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">最近写下的</h2>
+        <button type="button" class="nb-open chip hidden items-center gap-1 text-xs">✎ 写一页</button>
       </div>
       {page.length === 0 && (
         <div class="card p-8 text-center text-muted-foreground">
-          还没有笔记。运行 <code class="rounded bg-muted px-1.5 py-0.5">npm run new "标题"</code> 新建一篇。
+          本子还是空的。点右上角「写一页」开始吧。
         </div>
       )}
       {page.map((n, i) => <PostCard note={n} index={i} />)}

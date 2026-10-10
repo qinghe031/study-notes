@@ -1,0 +1,93 @@
+---
+// 倒计时 — sits beside the homepage title. Rendered from published JSON for
+// visitors; the owner can add/remove/edit them in place.
+import { COUNTDOWNS } from '../lib/site';
+const seed = JSON.stringify(COUNTDOWNS);
+---
+
+<div id="countdowns" class="flex flex-wrap items-center gap-2" data-seed={seed}>
+  <div id="cd-list" class="flex flex-wrap gap-2">
+    {
+      COUNTDOWNS.map((c) => (
+        <span class="cd-pill" data-id={c.id} data-date={c.date}>
+          <span class="cd-label">{c.label}</span>
+          <span class="cd-days" />
+        </span>
+      ))
+    }
+  </div>
+  <button type="button" id="cd-add" class="nb-owner chip hidden">+ 加个倒计时</button>
+</div>
+
+<style>
+  .cd-pill {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.2rem 0.7rem; border-radius: 9999px;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+    font-size: 0.8rem; color: var(--foreground);
+  }
+  .cd-days { font-weight: 700; color: var(--primary); }
+  .cd-pill.soon { background: color-mix(in srgb, #e8a33d 16%, transparent); border-color: color-mix(in srgb, #e8a33d 40%, transparent); }
+  .cd-pill.soon .cd-days { color: #c77f10; }
+  .cd-pill.past { opacity: 0.5; }
+  .cd-del { margin-left: -0.2rem; opacity: 0.5; font-size: 0.7rem; }
+  .cd-del:hover { opacity: 1; }
+</style>
+
+<script>
+  import { load, setCountdowns, seedMisc, uid, daysUntil } from '../lib/notebook';
+
+  const root = document.getElementById('countdowns')!;
+  const list = document.getElementById('cd-list')!;
+  const addBtn = document.getElementById('cd-add') as HTMLButtonElement;
+
+  const isOwner = () => { try { return Boolean(localStorage.getItem('gh:token') || localStorage.getItem('notebook:owner') || Object.keys(JSON.parse(localStorage.getItem('notebook:v1') || '{}').notes || {}).length); } catch { return false; } };
+
+  function label(d: number) {
+    if (d === 0) return '就是今天';
+    if (d > 0) return `还有 ${d} 天`;
+    return `已过 ${-d} 天`;
+  }
+
+  function render() {
+    const items = load().countdowns;
+    list.innerHTML = '';
+    for (const c of items) {
+      const d = daysUntil(c.date);
+      const el = document.createElement('span');
+      el.className = 'cd-pill' + (d >= 0 && d <= 7 ? ' soon' : '') + (d < 0 ? ' past' : '');
+      el.dataset.id = c.id; el.dataset.date = c.date;
+      el.innerHTML = `<span>${esc(c.label)}</span><span class="cd-days">${label(d)}</span>`;
+      if (isOwner()) {
+        const x = document.createElement('button'); x.type = 'button'; x.className = 'cd-del'; x.textContent = '✕'; x.title = '移除';
+        x.onclick = () => { setCountdowns(load().countdowns.filter((i) => i.id !== c.id)); render(); };
+        el.appendChild(x);
+        el.onclick = (e) => {
+          if ((e.target as HTMLElement).classList.contains('cd-del')) return;
+          const nd = prompt(`「${c.label}」的日期(YYYY-MM-DD):`, c.date);
+          if (nd && /^\d{4}-\d{2}-\d{2}$/.test(nd)) { const cl = load().countdowns.map((i) => i.id === c.id ? { ...i, date: nd } : i); setCountdowns(cl); render(); }
+        };
+      }
+      list.appendChild(el);
+    }
+    if (!items.length && !isOwner()) root.classList.add('hidden');
+    else root.classList.remove('hidden');
+  }
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+  if (isOwner()) {
+    seedMisc([], JSON.parse(root.dataset.seed || '[]'));
+    addBtn.classList.remove('hidden');
+    addBtn.onclick = () => {
+      const name = prompt('倒计时事件(比如:距离考试)');
+      if (!name) return;
+      const date = prompt('日期(YYYY-MM-DD)', new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      const cl = load().countdowns; cl.push({ id: uid(), label: name, date }); setCountdowns(cl); render();
+    };
+    render();
+  } else {
+    render(); // fills in the day counts for visitors from server-rendered pills
+  }
+</script>
