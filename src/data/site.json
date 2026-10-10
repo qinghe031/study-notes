@@ -5,6 +5,11 @@
   "slogan": "把学到的东西,写成能再读一遍的样子。",
   "footer": "本站内容本地编写 · 静态构建 · 可离线查看",
   "postsPerPage": 10,
+  "github": {
+    "owner": "qinghe031",
+    "repo": "study-notes",
+    "branch": "main"
+  },
   "social": {
     "github": "",
     "email": "",

@@ -1,28 +1,28 @@
 ---
-// "写笔记" entry point. Shown only when the dev writer is reachable (npm run dev),
-// since the hosted static site has nowhere to save to. Opens an editor sheet.
+// "写笔记" entry point. Two backends:
+//   • dev  — npm run dev mounts /__dev/write; saves straight to disk (instant).
+//   • gh   — hosted site commits to GitHub via a token the owner pastes once.
+// The trigger stays hidden until one of them is available, so visitors never see it.
 import { formatDate } from '../lib/content';
 const today = formatDate(new Date());
 ---
 
-<!-- trigger (hidden until the dev writer answers) -->
 <button id="wn-open" type="button" class="wn-trigger chip hidden items-center gap-1.5 !px-3 !py-1.5 !text-sm">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
   写笔记
 </button>
 
-<!-- editor sheet -->
 <div id="wn-sheet" class="fixed inset-0 z-[75] hidden" role="dialog" aria-modal="true" aria-label="写笔记">
   <div id="wn-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
   <div class="absolute inset-x-0 bottom-0 top-0 mx-auto flex max-w-5xl flex-col bg-background shadow-2xl sm:inset-y-4 sm:rounded-2xl">
-    <header class="flex items-center justify-between border-b border-border px-5 py-3">
-      <div class="flex items-center gap-3">
-        <h2 class="text-base font-semibold">写笔记</h2>
-        <span id="wn-path" class="hidden text-xs text-muted-foreground sm:inline">src/content/notes/…</span>
+    <header class="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
+      <div class="flex min-w-0 items-center gap-3">
+        <h2 id="wn-title" class="text-base font-semibold whitespace-nowrap">写笔记</h2>
+        <span id="wn-path" class="hidden truncate text-xs text-muted-foreground sm:inline">src/content/notes/…</span>
       </div>
       <div class="flex items-center gap-2">
-        <span id="wn-msg" class="text-xs text-muted-foreground"></span>
-        <button id="wn-save" type="button" class="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50">保存并打开</button>
+        <span id="wn-msg" class="hidden text-xs text-muted-foreground sm:inline"></span>
+        <button id="wn-save" type="button" class="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50">保存</button>
         <button id="wn-close" type="button" aria-label="关闭" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
@@ -38,9 +38,11 @@ const today = formatDate(new Date());
       </div>
       <input name="summary" placeholder="一句话摘要(显示在卡片上,可空)" class="wn-inp" />
       <textarea name="body" placeholder="## 第一节&#10;&#10;正文用 Markdown 写。支持代码块、$公式$、表格、图片 ./images/xxx.png" class="wn-inp min-h-[18rem] flex-1 resize-none font-mono text-[14px] leading-relaxed"></textarea>
-      <label class="flex items-center gap-2 text-xs text-muted-foreground">
-        <input name="draft" type="checkbox" /> 存为草稿(本地能看,正式发布不包含)
-      </label>
+      <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+        <label class="flex items-center gap-2"><input name="draft" type="checkbox" /> 存为草稿(发布版不包含)</label>
+        <label class="flex items-center gap-2"><input name="sticky" type="number" min="0" value="0" class="wn-inp w-16 !py-1 text-center" /> 置顶权重</label>
+        <button type="button" id="wn-token-btn" class="underline decoration-dotted hover:text-foreground">设置 GitHub 令牌</button>
+      </div>
     </form>
   </div>
 </div>
@@ -65,38 +67,83 @@ const today = formatDate(new Date());
 </style>
 
 <script>
-  const WRITE_URL = '/__dev/write';
-  const open = document.getElementById('wn-open') as HTMLButtonElement | null;
+  import { getToken, setToken, verifyToken, getFile, putFile, actionsUrl, newTokenUrl, GH } from '../lib/github';
+
+  const DEV_URL = '/__dev/write';
+  const openBtn = document.getElementById('wn-open') as HTMLButtonElement | null;
   const sheet = document.getElementById('wn-sheet')!;
   const form = document.getElementById('wn-form') as HTMLFormElement;
   const saveBtn = document.getElementById('wn-save') as HTMLButtonElement;
   const msg = document.getElementById('wn-msg')!;
   const pathEl = document.getElementById('wn-path')!;
+  const titleEl = document.getElementById('wn-title')!;
   const DRAFT_KEY = 'write-note:draft';
 
-  // Only reveal the entry point if the dev writer is up.
+  type Mode = 'dev' | 'gh' | 'none';
+  let mode: Mode = 'none';
+  let editingPath: string | null = null; // set when editing an existing note
+  let editingSha: string | null = null;
+
+  /* ── detect backend ─────────────────────────────────────────────────── */
   (async () => {
     try {
-      const r = await fetch(WRITE_URL);
-      if (r.ok) {
-        open?.classList.remove('hidden');
-        document.querySelectorAll<HTMLElement>('.wn-open-alias').forEach((el) => el.classList.remove('hidden'));
-      }
+      const r = await fetch(DEV_URL, { cache: 'no-store' });
+      if (r.ok) { mode = 'dev'; return; }
     } catch {}
+    if (getToken()) { mode = 'gh'; return; }
+    // No token yet: still show the button on the hosted site so the owner can
+    // set up. Visitors who click it see the token prompt and can dismiss it.
+    if (location.hostname.endsWith('github.io') || location.protocol === 'https:') mode = 'gh';
   })();
 
+  const reveal = () => {
+    openBtn?.classList.remove('hidden');
+    document.querySelectorAll<HTMLElement>('.wn-open-alias').forEach((el) => el.classList.remove('hidden'));
+  };
+  // Poll briefly until backend detection finishes, then reveal.
+  const iv = setInterval(() => { if (mode !== 'none') { clearInterval(iv); reveal(); } }, 150);
+  setTimeout(() => clearInterval(iv), 3000);
+
+  /* ── token setup ────────────────────────────────────────────────────── */
+  async function ensureToken(): Promise<boolean> {
+    let token = getToken();
+    if (token) {
+      const v = await verifyToken(token);
+      if (v.ok) return true;
+      if (v.error && !confirm(`令牌不可用:${v.error}\n\n要重新设置吗?`)) return false;
+    }
+    const t = prompt(
+      `在线保存需要一次性设置 GitHub 令牌(只存在你本机浏览器里,不会上传)。\n\n` +
+      `1. 点确定后打开生成页面:勾选 【Contents: Read and write】,仓库选 ${GH.owner}/${GH.repo}\n` +
+      `2. 生成后复制令牌,再回到这里粘贴一次\n\n` +
+      `现在点确定继续。`,
+    );
+    if (t === null) return false;
+    window.open(newTokenUrl(), '_blank');
+    const pasted = prompt('粘贴你刚生成的令牌(通常以 github_pat_ 或 ghp_ 开头):');
+    if (!pasted) return false;
+    setToken(pasted);
+    const v = await verifyToken(pasted);
+    if (!v.ok) { alert('令牌校验失败:' + (v.error || '未知错误')); setToken(''); return false; }
+    return true;
+  }
+
+  /* ── form helpers ───────────────────────────────────────────────────── */
   const safeName = (s: string) => s.replace(/[\\/:*?"<>|\s]+/g, '-').replace(/^-+|-+$/g, '');
+  const el = (n: string) => form.elements.namedItem(n) as HTMLInputElement;
 
   function read() {
     const f = new FormData(form);
-    const title = String(f.get('title') || '').trim();
-    const date = String(f.get('date') || '');
-    const category = String(f.get('category') || '').trim() || '未分类';
-    const tags = String(f.get('tags') || '').split(/[,，]/).map((s) => s.trim()).filter(Boolean);
-    const summary = String(f.get('summary') || '').trim();
-    const draft = f.get('draft') === 'on';
-    const body = String(f.get('body') || '');
-    return { title, date, category, tags, summary, draft, body };
+    return {
+      title: String(f.get('title') || '').trim(),
+      date: String(f.get('date') || ''),
+      category: String(f.get('category') || '').trim() || '未分类',
+      tags: String(f.get('tags') || '').split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+      summary: String(f.get('summary') || '').trim(),
+      draft: f.get('draft') === 'on',
+      sticky: Number(f.get('sticky') || 0) || 0,
+      body: String(f.get('body') || ''),
+    };
   }
 
   function compose() {
@@ -108,50 +155,78 @@ const today = formatDate(new Date());
       `category: ${d.category}`,
       `tags: [${d.tags.join(', ')}]`,
       d.summary ? `summary: ${d.summary}` : null,
-      'sticky: 0',
+      `sticky: ${d.sticky}`,
       `draft: ${d.draft}`,
       '---',
       '',
       d.body.trim(),
       '',
     ].filter((l) => l !== null).join('\n');
-    const path = `src/content/notes/${d.date}-${safeName(d.title) || '未命名'}.md`;
-    return { path, content: fm, slug: `${d.date}-${safeName(d.title) || '未命名'}` };
+    const slug = editingPath
+      ? editingPath.replace(/^src\/content\/notes\//, '').replace(/\.md$/, '')
+      : `${d.date}-${safeName(d.title) || '未命名'}`;
+    const path = editingPath || `src/content/notes/${slug}.md`;
+    return { path, content: fm, slug, isNew: !editingPath };
   }
 
-  function show() {
+  function updatePath() { if (!editingPath) pathEl.textContent = compose().path; }
+  function persistDraft() { if (editingPath) return; try { localStorage.setItem(DRAFT_KEY, JSON.stringify(read())); } catch {} }
+  function setMsg(t: string) { msg.textContent = t; msg.classList.toggle('hidden', !t); }
+
+  /* ── open / close ───────────────────────────────────────────────────── */
+  function openEditor(prefill?: { path: string; content: string; sha?: string }) {
+    editingPath = prefill?.path ?? null;
+    editingSha = prefill?.sha ?? null;
+    titleEl.textContent = prefill ? '编辑笔记' : '写笔记';
+    saveBtn.textContent = prefill ? '保存修改' : '保存';
+    if (prefill) {
+      const fm = parseFrontmatter(prefill.content);
+      el('title').value = fm.title || '';
+      el('date').value = fm.date || '';
+      el('category').value = fm.category || '';
+      el('tags').value = fm.tags || '';
+      el('summary').value = fm.summary || '';
+      el('sticky').value = fm.sticky || '0';
+      (form.elements.namedItem('draft') as HTMLInputElement).checked = fm.draft === 'true';
+      (form.elements.namedItem('body') as HTMLTextAreaElement).value = fm.body || '';
+      pathEl.textContent = prefill.path;
+    } else {
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (raw) {
+          const d = JSON.parse(raw);
+          el('title').value = d.title || '';
+          el('category').value = d.category || '';
+          el('tags').value = d.tags || '';
+          el('summary').value = d.summary || '';
+          (form.elements.namedItem('body') as HTMLTextAreaElement).value = d.body || '';
+        }
+      } catch {}
+      updatePath();
+    }
     sheet.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    // restore an unsaved draft if there is one
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) {
-        const d = JSON.parse(raw);
-        for (const [k, v] of Object.entries(d)) {
-          const el = form.elements.namedItem(k) as HTMLInputElement | null;
-          if (!el) continue;
-          if (el.type === 'checkbox') el.checked = Boolean(v);
-          else el.value = String(v);
-        }
-      }
-    } catch {}
-    (form.elements.namedItem('title') as HTMLInputElement).focus();
-    updatePath();
+    el('title').focus();
   }
-  function hide() {
-    sheet.classList.add('hidden');
-    document.body.style.overflow = '';
-  }
-  function updatePath() {
-    pathEl.textContent = compose().path;
-  }
-  function persistDraft() {
-    const d = read();
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch {}
+  function hide() { sheet.classList.add('hidden'); document.body.style.overflow = ''; }
+
+  function parseFrontmatter(src: string): Record<string, string> {
+    const m = src.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+    if (!m) return { body: src };
+    const fm: Record<string, string> = {};
+    for (const line of m[1].split('\n')) {
+      const kv = line.match(/^(\w+):\s*(.*)$/);
+      if (!kv) continue;
+      let v = kv[2].trim();
+      if (kv[1] === 'tags') v = v.replace(/^\[|\]$/g, '');
+      fm[kv[1]] = v;
+    }
+    fm.body = m[2];
+    return fm;
   }
 
-  open?.addEventListener('click', show);
-  document.querySelectorAll<HTMLElement>('.wn-open-alias').forEach((el) => el.addEventListener('click', show));
+  openBtn?.addEventListener('click', () => openEditor());
+  document.querySelectorAll<HTMLElement>('.wn-open-alias').forEach((e) => e.addEventListener('click', () => openEditor()));
   document.getElementById('wn-close')?.addEventListener('click', hide);
   document.getElementById('wn-backdrop')?.addEventListener('click', hide);
   document.addEventListener('keydown', (e) => {
@@ -160,29 +235,53 @@ const today = formatDate(new Date());
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); }
   });
   form.addEventListener('input', () => { updatePath(); persistDraft(); });
+  document.getElementById('wn-token-btn')?.addEventListener('click', () => { setToken(''); ensureToken(); });
 
+  /* ── save ───────────────────────────────────────────────────────────── */
   async function save() {
     const d = read();
-    if (!d.title) { msg.textContent = '先写个标题'; (form.elements.namedItem('title') as HTMLInputElement).focus(); return; }
+    if (!d.title) { setMsg('先写个标题'); el('title').focus(); return; }
     const { path, content, slug } = compose();
     saveBtn.disabled = true;
-    msg.textContent = '保存中…';
     try {
-      let r = await fetch(WRITE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, content }) });
-      if (r.status === 409) {
-        if (!confirm('同名笔记已存在,覆盖吗?')) { msg.textContent = ''; saveBtn.disabled = false; return; }
-        r = await fetch(WRITE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, content, overwrite: true }) });
+      if (mode === 'dev') {
+        setMsg('保存中…');
+        let r = await fetch(DEV_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, content, overwrite: !editingPath }) });
+        if (r.status === 409) {
+          if (!confirm('同名笔记已存在,覆盖吗?')) { saveBtn.disabled = false; setMsg(''); return; }
+          r = await fetch(DEV_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, content, overwrite: true }) });
+        }
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || '保存失败');
+        try { localStorage.removeItem(DRAFT_KEY); } catch {}
+        setMsg('已保存,正在打开…');
+        setTimeout(() => { location.href = `/notes/${slug}/`; }, 500);
+        return;
       }
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || '保存失败');
+
+      // ── GitHub mode ──
+      if (!(await ensureToken())) { saveBtn.disabled = false; setMsg(''); return; }
+      setMsg('提交中…');
+      let sha = editingSha || undefined;
+      if (editingPath && !sha) {
+        const info = await getFile(path);
+        sha = info?.sha;
+      }
+      await putFile(path, content, editingPath ? `更新笔记:${slug}` : `新增笔记:${slug}`, sha);
       try { localStorage.removeItem(DRAFT_KEY); } catch {}
-      msg.textContent = '已保存,正在打开…';
-      // give the dev server a beat to pick up the new file
-      setTimeout(() => { location.href = `/notes/${slug}/`; }, 600);
+      setMsg('已提交!约 1~2 分钟后网站更新。');
+      saveBtn.textContent = '已提交 ✓';
+      setTimeout(() => {
+        if (confirm('已提交到 GitHub。构建需要 1~2 分钟。\n\n现在打开 Actions 看构建进度?')) window.open(actionsUrl(), '_blank');
+        hide();
+      }, 700);
     } catch (e: any) {
-      msg.textContent = '保存失败:' + (e?.message || e);
+      setMsg('失败:' + (e?.message || e));
       saveBtn.disabled = false;
     }
   }
   saveBtn.addEventListener('click', save);
+
+  // expose for the article-page edit button
+  (window as any).__openNoteEditor = openEditor;
 </script>

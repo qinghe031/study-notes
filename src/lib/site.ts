@@ -16,6 +16,8 @@ export interface SiteConfig {
   slogan: string;
   footer: string;
   postsPerPage: number;
+  /** Where the hosted site's "write/edit" buttons commit to. */
+  github: { owner: string; repo: string; branch: string };
   social: { github: string; email: string; bilibili: string };
 }
 

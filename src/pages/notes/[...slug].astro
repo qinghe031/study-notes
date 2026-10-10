@@ -10,6 +10,7 @@ import LikeButton from '../../components/LikeButton.astro';
 import Giscus from '../../components/Giscus.astro';
 import ReadingProgress from '../../components/ReadingProgress.astro';
 import PostCard from '../../components/PostCard.astro';
+import EditNote from '../../components/EditNote.astro';
 import { INTERACTIONS } from '../../lib/site';
 import {
   getNotes,
@@ -45,9 +46,12 @@ const minutes = readingMinutes(note.body);
   <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
     <article class="min-w-0">
       <header class="reveal mb-8">
-        <a href={withBase("/")} class="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
-          ← 返回首页
-        </a>
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <a href={withBase("/")} class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+            ← 返回首页
+          </a>
+          <EditNote noteId={note.id} />
+        </div>
         <div class="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <a href={withBase(`/category/${slugify(category)}/`)} class="rounded-md bg-muted px-2 py-0.5 hover:text-primary">{category}</a>
           <time datetime={date.toISOString()}>{formatDate(date)}</time>

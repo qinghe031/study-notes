@@ -1,0 +1,63 @@
+---
+// "编辑这篇" button on an article page. Loads the raw .md (via GitHub API on the
+// hosted site, or the dev server locally) and opens the shared editor prefilled.
+interface Props {
+  /** Collection id, e.g. "2026-10-10-动态规划入门" → src/content/notes/<id>.md */
+  noteId: string;
+}
+const { noteId } = Astro.props;
+const path = `src/content/notes/${noteId}.md`;
+---
+
+<button id="edit-note" type="button" data-path={path} class="chip hidden items-center gap-1">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+  编辑这篇
+</button>
+
+<style>
+  #edit-note:not(.hidden) { display: inline-flex; }
+</style>
+
+<script>
+  import { getToken, getFile } from '../lib/github';
+
+  const btn = document.getElementById('edit-note') as HTMLButtonElement | null;
+  if (btn) {
+    const path = btn.dataset.path!;
+    // Show only when there's a way to save: dev writer, or a GitHub token.
+    (async () => {
+      let can = Boolean(getToken());
+      if (!can) { try { can = (await fetch('/__dev/write', { cache: 'no-store' })).ok; } catch {} }
+      if (can) btn.classList.remove('hidden');
+    })();
+
+    btn.addEventListener('click', async () => {
+      const open = (window as any).__openNoteEditor as ((p: { path: string; content: string; sha?: string }) => void) | undefined;
+      if (!open) return alert('编辑器未加载,请刷新页面。');
+      btn.disabled = true;
+      const old = btn.textContent;
+      btn.textContent = '读取中…';
+      try {
+        // Prefer the dev server's copy when running locally.
+        let content: string | null = null;
+        let sha: string | undefined;
+        try {
+          const r = await fetch('/__dev/read?path=' + encodeURIComponent(path), { cache: 'no-store' });
+          if (r.ok) content = (await r.json()).content;
+        } catch {}
+        if (content == null) {
+          const info = await getFile(path);
+          if (!info) throw new Error('仓库里没有这个文件');
+          content = info.content;
+          sha = info.sha;
+        }
+        open({ path, content, sha });
+      } catch (e: any) {
+        alert('读取失败:' + (e?.message || e));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = old;
+      }
+    });
+  }
+</script>
