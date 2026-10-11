@@ -5,6 +5,7 @@ import Countdowns from '../components/Countdowns.astro';
 import PostRow from '../components/PostRow.astro';
 import SidebarProfile from '../components/SidebarProfile.astro';
 import FocusToday from '../components/FocusToday.astro';
+import LocalNotes from '../components/LocalNotes.astro';
 import Pagination from '../components/Pagination.astro';
 import { withBase } from '../lib/url';
 import { getNotes } from '../lib/content';
@@ -33,6 +34,7 @@ const total = Math.max(1, Math.ceil(notes.length / SITE.postsPerPage));
         </div>
       </header>
       <FocusToday />
+      <LocalNotes />
       {
         page.length === 0 ? (
           <p class="py-10 text-center text-sm text-muted-foreground">还是空的。点「写一页」开始。</p>
