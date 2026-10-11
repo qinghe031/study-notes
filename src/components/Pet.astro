@@ -1,154 +1,243 @@
 ---
-// 桌宠 — the dog from the photo: black coat, white stripe down the long muzzle,
-// white chest and front paws, lying with both front legs stretched toward you,
-// floppy ears, a rope leash with a clip. Click the head → encouragement.
-// Click the tail → sync the notebook.
+// 桌宠 — the dog from the model sheet. Three poses that share one head:
+//   趴下 lie  (default)   · 蹲下 sit (tap the head)   · 行走 walk (drag it around)
+// Black coat, white blaze with freckles, white chest, white socks with black
+// spots, pink tongue, rope leash with a carabiner. Pure SVG, no assets.
+// Tail click → sync the notebook. Position is remembered.
 ---
 
-<div id="pet" class="pet-wrap" aria-live="polite">
+<div id="pet" class="pet-wrap" aria-live="polite" data-pose="lie">
   <div id="pet-bubble" class="card pet-bubble">汪!</div>
 
-  <svg id="pet-svg" viewBox="0 0 240 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="桌宠">
+  <svg id="pet-svg" viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="桌宠">
     <defs>
       <linearGradient id="coat" x1="0" y1="0" x2="0.25" y2="1">
-        <stop offset="0" stop-color="#3a3d43"/>
-        <stop offset="0.55" stop-color="#232629"/>
-        <stop offset="1" stop-color="#141618"/>
+        <stop offset="0" stop-color="#3b3e44"/><stop offset="0.5" stop-color="#232629"/><stop offset="1" stop-color="#121416"/>
       </linearGradient>
-      <linearGradient id="coat-lo" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#2a2d31"/>
-        <stop offset="1" stop-color="#101214"/>
+      <linearGradient id="coat2" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#2c2f34"/><stop offset="1" stop-color="#0f1113"/>
       </linearGradient>
       <linearGradient id="white" x1="0" y1="0" x2="0.2" y2="1">
-        <stop offset="0" stop-color="#ffffff"/>
-        <stop offset="1" stop-color="#dcd9d3"/>
+        <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dad7d1"/>
       </linearGradient>
       <radialGradient id="eye" cx="40%" cy="38%" r="65%">
-        <stop offset="0" stop-color="#8a6a44"/>
-        <stop offset="0.65" stop-color="#4a3520"/>
-        <stop offset="1" stop-color="#1e150c"/>
+        <stop offset="0" stop-color="#8a6a44"/><stop offset="0.65" stop-color="#4a3520"/><stop offset="1" stop-color="#1e150c"/>
       </radialGradient>
+      <!-- freckles on the blaze -->
+      <pattern id="freckle" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(20)">
+        <circle cx="2" cy="2" r="0.9" fill="#2a2d31" opacity="0.55"/><circle cx="5.5" cy="5" r="0.7" fill="#2a2d31" opacity="0.45"/>
+      </pattern>
     </defs>
 
-    <!-- ground shadow -->
-    <ellipse cx="128" cy="152" rx="96" ry="7" fill="#1b1f24" opacity="0.10"/>
+    <ellipse id="pet-ground" cx="120" cy="186" rx="86" ry="6" fill="#1b1f24" opacity="0.10"/>
 
-    <!-- ── tail (hit zone; behind body) ── -->
-    <g id="pet-tail" class="pet-tail" tabindex="0" role="button" aria-label="点尾巴同步博客">
-      <path d="M44 118 C26 114 14 100 18 84 C21 72 32 70 36 80 C39 88 30 96 32 104 C34 110 40 114 48 116 Z" fill="url(#coat)"/>
-      <path d="M46 120 C30 118 18 104 22 88" fill="none" stroke="#5a5f66" stroke-width="1.4" stroke-linecap="round" opacity="0.6"/>
-    </g>
-
-    <!-- ── haunch + hind foot ── -->
-    <path d="M58 124 C50 108 58 96 76 94 L108 96 L110 128 Z" fill="url(#coat-lo)"/>
-    <path d="M60 128 C56 118 62 110 74 109 C82 108 86 114 84 122 L62 128 Z" fill="url(#white)"/>
-
-    <!-- ── body (long, low) ── -->
-    <path d="M72 100 C76 86 100 80 128 82 L166 86 C182 88 190 98 190 110 L188 128 L74 128 Z" fill="url(#coat)"/>
-    <path d="M90 92 C104 88 124 87 140 90" fill="none" stroke="#4a4f56" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
-
-    <!-- ── chest ruff (white, under the chin) ── -->
-    <path d="M150 104 C156 98 170 98 178 104 C186 110 186 122 182 128 L152 128 C146 120 146 110 150 104 Z" fill="url(#white)"/>
-
-    <!-- ── front legs: two long straight legs reaching toward the viewer ── -->
-    <!-- far leg -->
-    <path d="M156 118 L170 118 L206 152 C210 156 207 161 201 160 L186 158 L154 126 Z" fill="url(#coat)"/>
-    <path d="M184 144 L206 152 C211 154 210 160 203 160 L186 158 Z" fill="url(#white)"/>
-    <g stroke="#bdb9b2" stroke-width="1.1" stroke-linecap="round"><line x1="194" y1="153" x2="196" y2="159"/><line x1="200" y1="153" x2="202" y2="159"/></g>
-    <!-- near leg -->
-    <path d="M140 118 L156 118 L184 156 C188 161 184 166 178 164 L164 160 L138 128 Z" fill="url(#coat)"/>
-    <path d="M160 146 L184 156 C189 158 187 165 180 164 L164 160 Z" fill="url(#white)"/>
-    <g stroke="#bdb9b2" stroke-width="1.1" stroke-linecap="round"><line x1="170" y1="157" x2="172" y2="163"/><line x1="177" y1="157" x2="179" y2="163"/></g>
-
-    <!-- ── rope leash with clip, trailing off to the left ── -->
-    <path d="M150 128 C130 136 106 140 86 136 C70 133 56 126 48 118" fill="none" stroke="#d2c7b2" stroke-width="3.2" stroke-linecap="round"/>
-    <path d="M150 128 C130 136 106 140 86 136 C70 133 56 126 48 118" fill="none" stroke="#a89d88" stroke-width="1" stroke-linecap="round" stroke-dasharray="3 4"/>
-    <path d="M150 122 l6 10" stroke="#8d939a" stroke-width="3.2" stroke-linecap="round"/>
-    <circle cx="149" cy="121" r="3.2" fill="none" stroke="#8d939a" stroke-width="2"/>
-
-    <!-- ── head (hit zone) ── -->
-    <g id="pet-head" class="pet-head" tabindex="0" role="button" aria-label="点我的头">
-      <!-- floppy ears, hanging -->
-      <path d="M134 64 C124 56 120 70 124 84 C126 92 134 96 140 92 C142 84 140 72 134 64 Z" fill="url(#coat-lo)"/>
-      <path d="M196 60 C206 54 212 66 208 80 C206 88 198 92 192 88 C190 80 192 68 196 60 Z" fill="url(#coat-lo)"/>
-      <!-- skull: wide at the back, tapering into a long muzzle (down-right) -->
-      <path d="M136 70 C136 52 152 42 168 42 C184 42 198 52 198 68 C198 78 194 86 188 92 L204 112 C208 118 204 126 196 126 L176 126 C166 126 158 120 154 112 L146 96 C140 90 136 80 136 70 Z" fill="url(#coat)"/>
-      <!-- white blaze: from forehead down the muzzle -->
-      <path d="M166 52 C172 50 178 54 178 62 L182 90 L200 112 C204 118 200 125 194 125 L178 125 C170 125 165 119 163 112 L158 90 C156 78 160 60 166 52 Z" fill="url(#white)"/>
-      <!-- muzzle shading -->
-      <path d="M170 92 L188 112 C192 117 190 122 185 122 L176 122 C170 121 167 116 166 110 Z" fill="#ecebe6"/>
-      <!-- nose -->
-      <path d="M194 110 C200 110 205 114 204 119 C203 124 197 125 193 122 C190 119 190 112 194 110 Z" fill="#1d2025"/>
-      <ellipse cx="196" cy="113.5" rx="1.8" ry="1" fill="#4e545b" opacity="0.8"/>
-      <!-- mouth, slightly open -->
-      <path d="M192 122 C190 126 184 127 180 125" fill="none" stroke="#2a2d33" stroke-width="1.2" stroke-linecap="round"/>
-      <path d="M184 125 C185 128 188 129 190 127" fill="#c96f7a" stroke="#8e4a55" stroke-width="0.6"/>
-      <!-- eyes -->
-      <ellipse cx="156" cy="72" rx="4.4" ry="4" fill="url(#eye)" class="pet-eye"/>
-      <ellipse cx="176" cy="70" rx="4.4" ry="4" fill="url(#eye)" class="pet-eye"/>
-      <circle cx="157.5" cy="70.4" r="1.3" fill="#fff" opacity="0.9"/>
-      <circle cx="177.5" cy="68.4" r="1.3" fill="#fff" opacity="0.9"/>
-      <!-- tan brow dots -->
-      <circle cx="152" cy="63" r="1.6" fill="#8a6a44" opacity="0.6"/>
-      <circle cx="180" cy="61" r="1.6" fill="#8a6a44" opacity="0.6"/>
-      <!-- whiskers -->
-      <g stroke="#e9e6df" stroke-width="0.7" stroke-linecap="round" opacity="0.7">
-        <line x1="204" y1="116" x2="216" y2="112"/><line x1="204" y1="120" x2="217" y2="121"/>
-        <line x1="172" y1="120" x2="166" y2="128"/>
+    <!-- ═══ 趴下 LIE ═══════════════════════════════════════════════════════ -->
+    <g id="pose-lie" class="pose">
+      <g id="tail-lie" class="pet-tail" data-origin="44 160">
+        <path d="M44 160 C26 156 14 142 18 126 C21 114 32 112 36 122 C39 130 30 138 32 146 C34 152 40 156 48 158 Z" fill="url(#coat)"/>
       </g>
+      <!-- hind leg tucked under, white foot peeking -->
+      <path d="M60 170 C50 156 56 142 74 138 L104 140 L106 172 Z" fill="url(#coat2)"/>
+      <path d="M62 172 C58 164 64 158 74 157 C82 156 86 161 84 168 L64 172 Z" fill="url(#white)"/>
+      <circle cx="72" cy="166" r="1.3" fill="#2a2d31" opacity="0.5"/>
+      <!-- body -->
+      <path d="M74 146 C78 130 102 124 130 126 L168 130 C184 132 192 142 192 154 L190 172 L76 172 Z" fill="url(#coat)"/>
+      <!-- chest -->
+      <path d="M152 148 C158 142 172 142 180 148 C188 154 188 166 184 172 L154 172 C148 164 148 154 152 148 Z" fill="url(#white)"/>
+      <!-- front legs: lying flat on the ground, reaching forward, white paws at the front -->
+      <path d="M146 174 C150 170 160 170 170 172 L204 180 C210 182 210 190 204 192 L170 192 C160 192 152 189 146 184 Z" fill="url(#coat)"/>
+      <path d="M180 182 L204 182 C209 182 210 191 204 192 L180 192 C176 192 174 188 176 185 Z" fill="url(#white)"/>
+      <circle cx="190" cy="187" r="1.4" fill="#2a2d31" opacity="0.6"/><circle cx="198" cy="188" r="1.1" fill="#2a2d31" opacity="0.5"/>
+      <path d="M126 176 C130 172 140 172 150 174 L184 184 C190 186 190 195 184 197 L150 197 C140 197 132 193 126 187 Z" fill="url(#coat2)"/>
+      <path d="M160 186 L184 186 C189 186 190 196 184 197 L160 197 C156 197 154 193 156 189 Z" fill="url(#white)"/>
+      <circle cx="170" cy="192" r="1.4" fill="#2a2d31" opacity="0.6"/><circle cx="178" cy="193" r="1.1" fill="#2a2d31" opacity="0.5"/>
+      <!-- leash -->
+      <path d="M152 170 C132 178 108 182 88 178 C72 175 58 168 50 160" fill="none" stroke="#d2c7b2" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M152 170 C132 178 108 182 88 178 C72 175 58 168 50 160" fill="none" stroke="#a89d88" stroke-width="1" stroke-linecap="round" stroke-dasharray="3 4"/>
+      <g class="pet-head-slot" transform="translate(0 10)"><use href="#pet-head-shape"/></g>
     </g>
+
+    <!-- ═══ 蹲下 SIT ═══════════════════════════════════════════════════════ -->
+    <g id="pose-sit" class="pose">
+      <g id="tail-sit" class="pet-tail" data-origin="72 176">
+        <path d="M72 176 C54 174 42 160 46 146 C49 136 60 134 62 144 C64 152 56 160 60 166 C63 170 68 173 74 174 Z" fill="url(#coat)"/>
+      </g>
+      <!-- haunch (big rounded hip) -->
+      <path d="M78 186 C62 172 66 140 94 126 L152 122 C176 122 190 138 188 160 L188 186 Z" fill="url(#coat)"/>
+      <!-- hind foot tucked forward, white -->
+      <path d="M80 188 C78 180 84 174 96 174 C106 174 112 180 110 188 Z" fill="url(#white)"/>
+      <circle cx="90" cy="184" r="1.3" fill="#2a2d31" opacity="0.5"/><circle cx="100" cy="186" r="1.1" fill="#2a2d31" opacity="0.5"/>
+      <!-- chest -->
+      <path d="M130 124 C140 116 158 116 168 124 C178 132 178 154 172 172 L134 172 C126 154 124 134 130 124 Z" fill="url(#white)"/>
+      <!-- front legs straight down, white socks -->
+      <path d="M128 152 C128 150 130 148 134 148 L144 148 C148 148 150 150 150 152 L150 180 L128 180 Z" fill="url(#coat)"/>
+      <path d="M126 178 C126 173 130 170 139 170 C148 170 152 173 152 178 L152 184 C152 189 148 191 139 191 C130 191 126 189 126 184 Z" fill="url(#white)"/>
+      <circle cx="134" cy="183" r="1.3" fill="#2a2d31" opacity="0.6"/><circle cx="142" cy="186" r="1.1" fill="#2a2d31" opacity="0.5"/>
+      <path d="M156 152 C156 150 158 148 162 148 L172 148 C176 148 178 150 178 152 L178 180 L156 180 Z" fill="url(#coat)"/>
+      <path d="M154 178 C154 173 158 170 167 170 C176 170 180 173 180 178 L180 184 C180 189 176 191 167 191 C158 191 154 189 154 184 Z" fill="url(#white)"/>
+      <circle cx="162" cy="183" r="1.3" fill="#2a2d31" opacity="0.6"/><circle cx="170" cy="186" r="1.1" fill="#2a2d31" opacity="0.5"/>
+      <!-- leash hanging -->
+      <path d="M152 152 C144 162 132 168 120 170" fill="none" stroke="#d2c7b2" stroke-width="3" stroke-linecap="round"/>
+      <path d="M152 152 C144 162 132 168 120 170" fill="none" stroke="#a89d88" stroke-width="1" stroke-linecap="round" stroke-dasharray="3 4"/>
+      <g class="pet-head-slot" transform="translate(-4 -22)"><use href="#pet-head-shape"/></g>
+    </g>
+
+    <!-- ═══ 行走 WALK ══════════════════════════════════════════════════════ -->
+    <g id="pose-walk" class="pose">
+      <g id="tail-walk" class="pet-tail pet-tail--up" data-origin="54 124">
+        <path d="M54 124 C42 114 36 100 44 88 C50 80 60 84 58 94 C57 102 50 108 52 116 C53 120 56 122 60 124 Z" fill="url(#coat)"/>
+      </g>
+      <!-- body -->
+      <path d="M60 128 C64 110 90 102 120 104 L162 108 C180 110 190 120 190 134 L188 152 L64 152 Z" fill="url(#coat)"/>
+      <path d="M150 128 C156 122 170 122 178 128 C186 134 186 148 182 152 L152 152 C146 144 146 136 150 128 Z" fill="url(#white)"/>
+      <!-- legs: back pair, front pair -->
+      <g class="leg leg-a" data-origin="78 148"><path d="M70 148 L86 148 L85 178 C85 181 83 182 80 182 L76 182 C73 182 71 181 71 178 Z" fill="url(#coat2)"/><path d="M69 178 C69 174 72 172 78 172 C84 172 87 174 87 178 L87 185 C87 189 84 191 78 191 C72 191 69 189 69 185 Z" fill="url(#white)"/><circle cx="75" cy="183" r="1.3" fill="#2a2d31" opacity="0.6"/><circle cx="81" cy="186" r="1.1" fill="#2a2d31" opacity="0.5"/></g>
+      <g class="leg leg-b" data-origin="100 148"><path d="M92 148 L108 148 L107 178 C107 181 105 182 102 182 L98 182 C95 182 93 181 93 178 Z" fill="url(#coat)"/><path d="M91 178 C91 174 94 172 100 172 C106 172 109 174 109 178 L109 185 C109 189 106 191 100 191 C94 191 91 189 91 185 Z" fill="url(#white)"/><circle cx="97" cy="183" r="1.3" fill="#2a2d31" opacity="0.6"/><circle cx="103" cy="186" r="1.1" fill="#2a2d31" opacity="0.5"/></g>
+      <g class="leg leg-c" data-origin="148 148"><path d="M140 148 L156 148 L155 178 C155 181 153 182 150 182 L146 182 C143 182 141 181 141 178 Z" fill="url(#coat2)"/><path d="M139 178 C139 174 142 172 148 172 C154 172 157 174 157 178 L157 185 C157 189 154 191 148 191 C142 191 139 189 139 185 Z" fill="url(#white)"/><circle cx="145" cy="183" r="1.3" fill="#2a2d31" opacity="0.6"/><circle cx="151" cy="186" r="1.1" fill="#2a2d31" opacity="0.5"/></g>
+      <g class="leg leg-d" data-origin="170 148"><path d="M162 148 L178 148 L177 178 C177 181 175 182 172 182 L168 182 C165 182 163 181 163 178 Z" fill="url(#coat)"/><path d="M161 178 C161 174 164 172 170 172 C176 172 179 174 179 178 L179 185 C179 189 176 191 170 191 C164 191 161 189 161 185 Z" fill="url(#white)"/><circle cx="167" cy="183" r="1.3" fill="#2a2d31" opacity="0.6"/><circle cx="173" cy="186" r="1.1" fill="#2a2d31" opacity="0.5"/></g>
+      <!-- leash trailing -->
+      <path d="M158 140 C142 150 122 154 106 150 C92 147 80 140 72 132" fill="none" stroke="#d2c7b2" stroke-width="3" stroke-linecap="round"/>
+      <path d="M158 140 C142 150 122 154 106 150 C92 147 80 140 72 132" fill="none" stroke="#a89d88" stroke-width="1" stroke-linecap="round" stroke-dasharray="3 4"/>
+      <g class="pet-head-slot" transform="translate(6 -10)"><use href="#pet-head-shape"/></g>
+    </g>
+
+    <!-- ═══ shared head (defined once, placed per pose) ═══════════════════ -->
+    <defs>
+      <g id="pet-head-shape">
+        <!-- floppy ears -->
+        <path d="M134 92 C124 84 120 98 124 112 C126 120 134 124 140 120 C142 112 140 100 134 92 Z" fill="url(#coat2)"/>
+        <path d="M198 88 C208 82 214 94 210 108 C208 116 200 120 194 116 C192 108 194 96 198 88 Z" fill="url(#coat2)"/>
+        <!-- skull + long muzzle -->
+        <path d="M136 98 C136 80 152 70 168 70 C184 70 198 80 198 96 C198 106 194 114 188 120 L204 140 C208 146 204 154 196 154 L176 154 C166 154 158 148 154 140 L146 124 C140 118 136 108 136 98 Z" fill="url(#coat)"/>
+        <!-- white blaze w/ freckles -->
+        <path d="M166 80 C172 78 178 82 178 90 L182 118 L200 140 C204 146 200 153 194 153 L178 153 C170 153 165 147 163 140 L158 118 C156 106 160 88 166 80 Z" fill="url(#white)"/>
+        <path d="M166 80 C172 78 178 82 178 90 L182 118 L200 140 C204 146 200 153 194 153 L178 153 C170 153 165 147 163 140 L158 118 C156 106 160 88 166 80 Z" fill="url(#freckle)"/>
+        <!-- carabiner + rope knot at the collar -->
+        <path d="M150 150 l5 9" stroke="#8d939a" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="149" cy="149" r="3.2" fill="none" stroke="#8d939a" stroke-width="2"/>
+        <circle cx="156" cy="160" r="3.5" fill="#d2c7b2" stroke="#a89d88" stroke-width="1"/>
+        <!-- nose -->
+        <path d="M194 138 C200 138 205 142 204 147 C203 152 197 153 193 150 C190 147 190 140 194 138 Z" fill="#1d2025"/>
+        <ellipse cx="196" cy="141.5" rx="1.8" ry="1" fill="#4e545b" opacity="0.8"/>
+        <!-- open mouth + tongue -->
+        <path d="M192 150 C190 156 184 158 178 156" fill="none" stroke="#2a2d33" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M181 155 C182 160 186 162 189 159 C190 157 188 154 186 154 Z" fill="#d97a86" stroke="#9c4f5b" stroke-width="0.6"/>
+        <!-- eyes -->
+        <ellipse cx="156" cy="100" rx="4.4" ry="4" fill="url(#eye)" class="pet-eye"/>
+        <ellipse cx="176" cy="98" rx="4.4" ry="4" fill="url(#eye)" class="pet-eye"/>
+        <circle cx="157.5" cy="98.4" r="1.3" fill="#fff" opacity="0.9"/>
+        <circle cx="177.5" cy="96.4" r="1.3" fill="#fff" opacity="0.9"/>
+        <!-- whiskers -->
+        <g stroke="#e9e6df" stroke-width="0.7" stroke-linecap="round" opacity="0.7">
+          <line x1="204" y1="144" x2="216" y2="140"/><line x1="204" y1="148" x2="217" y2="149"/>
+        </g>
+        <!-- hit zone on top -->
+        <path id="pet-head-hit" d="M130 70 L210 70 L212 156 L150 160 L130 120 Z" fill="transparent" />
+      </g>
+    </defs>
   </svg>
 </div>
 
 <style>
-  .pet-wrap { position: fixed; bottom: 0.5rem; left: 0.75rem; z-index: 30; width: 9rem; user-select: none; }
+  .pet-wrap { position: fixed; bottom: 0.25rem; left: 0.75rem; z-index: 30; width: 9.5rem; user-select: none; touch-action: none; }
+  .pet-wrap.dragging { cursor: grabbing; }
+  .pet-wrap svg { width: 100%; height: auto; overflow: visible; display: block; }
+  .pet-wrap.flip svg { transform: scaleX(-1); }
   .pet-bubble {
-    position: absolute; bottom: 100%; left: 0.5rem; margin-bottom: 0.2rem;
+    position: absolute; bottom: 100%; left: 0.5rem; margin-bottom: 0.1rem;
     padding: 0.3rem 0.65rem; border-radius: 0.6rem; font-size: 0.78rem; width: max-content; max-width: 12rem;
-    opacity: 0; transform: translateY(4px); transition: opacity 0.25s, transform 0.25s;
-    pointer-events: none;
+    opacity: 0; transform: translateY(4px); transition: opacity 0.25s, transform 0.25s; pointer-events: none;
   }
   .pet-bubble.show { opacity: 1; transform: translateY(0); }
-  .pet-wrap svg { width: 100%; height: auto; overflow: visible; }
 
-  .pet-head, .pet-tail { cursor: pointer; }
-  .pet-head { transform-box: view-box; transform-origin: 160px 80px; transition: transform 0.25s ease; }
-  .pet-tail { transform-box: view-box; transform-origin: 46px 118px; transition: transform 0.25s ease; }
-  .pet-head:hover { transform: rotate(-3deg) translateY(-1.5px); }
+  /* one pose visible at a time */
+  .pose { display: none; }
+  .pet-wrap[data-pose="lie"]  #pose-lie,
+  .pet-wrap[data-pose="sit"]  #pose-sit,
+  .pet-wrap[data-pose="walk"] #pose-walk { display: inline; }
+
+  :global(#pet-head-hit) { cursor: pointer; }
+  .pet-tail { cursor: pointer; transform-box: view-box; transition: transform 0.25s ease; }
   .pet-tail:hover { transform: rotate(-10deg); }
-
-  .pet-head.pat { animation: pet-pat 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  @keyframes pet-pat { 0%, 100% { transform: translateY(0) rotate(0); } 35% { transform: translateY(3px) rotate(2deg); } 65% { transform: translateY(-2px) rotate(-2deg); } }
   .pet-tail.wag { animation: pet-wag 0.45s ease-in-out 4; }
   @keyframes pet-wag { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-22deg); } }
+  .pet-tail--up.wag { animation-name: pet-wag-up; }
+  @keyframes pet-wag-up { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(16deg); } }
 
-  .pet-eye { animation: pet-blink 5s infinite; transform-box: fill-box; transform-origin: center; }
+  /* sit: a little bob on arrival */
+  .pet-wrap[data-pose="sit"] #pose-sit { animation: pet-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); transform-box: view-box; transform-origin: 140px 190px; }
+  @keyframes pet-pop { 0% { transform: translateY(6px) scaleY(0.96); } 100% { transform: none; } }
+
+  /* walk: legs swing while dragging, whole body bobs */
+  .leg { transform-box: view-box; }
+  .pet-wrap.dragging .leg-a, .pet-wrap.dragging .leg-c { animation: pet-step 0.42s ease-in-out infinite; }
+  .pet-wrap.dragging .leg-b, .pet-wrap.dragging .leg-d { animation: pet-step 0.42s ease-in-out infinite reverse; }
+  @keyframes pet-step { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+  .pet-wrap.dragging #pose-walk { animation: pet-bob 0.42s ease-in-out infinite; transform-box: view-box; transform-origin: 120px 190px; }
+  @keyframes pet-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+  :global(.pet-eye) { animation: pet-blink 5s infinite; transform-box: fill-box; transform-origin: center; }
   @keyframes pet-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.12); } }
 
-  @media (prefers-reduced-motion: reduce) { .pet-head, .pet-tail, .pet-eye { animation: none !important; transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .pet-tail, .leg, #pose-walk, #pose-sit, :global(.pet-eye) { animation: none !important; transition: none; } }
 </style>
 
 <script>
   import { pending } from '../lib/notebook';
 
+  const wrap = document.getElementById('pet')!;
+  const svg = document.getElementById('pet-svg') as unknown as SVGSVGElement;
   const bubble = document.getElementById('pet-bubble')!;
-  const head = document.getElementById('pet-head')!;
-  const tail = document.getElementById('pet-tail')!;
+  const POS_KEY = 'pet:pos';
 
-  const LINES = ['汪!休息一下也没关系。', '今天也写一点吧。', '你已经比昨天多懂一点了。', '慢慢来,不着急。', '写下来,就记住了。', '我在这儿陪着你。', '摸摸头,继续加油。'];
-  let last = -1, timer = 0;
-  function say(text: string, ms = 2600) {
-    bubble.textContent = text; bubble.classList.add('show');
-    clearTimeout(timer); timer = window.setTimeout(() => bubble.classList.remove('show'), ms);
-  }
-  const replay = (el: HTMLElement, cls: string) => { el.classList.remove(cls); void el.getBoundingClientRect(); el.classList.add(cls); };
-
-  head.addEventListener('click', () => {
-    let i; do { i = Math.floor(Math.random() * LINES.length); } while (i === last && LINES.length > 1);
-    last = i; replay(head, 'pat'); say(LINES[i]);
+  // Leg/tail pivots: set transform-origin from data-origin (view-box coords).
+  svg.querySelectorAll<SVGElement>('[data-origin]').forEach((el) => {
+    const [x, y] = (el.dataset.origin || '0 0').split(' ');
+    el.style.transformOrigin = `${x}px ${y}px`;
   });
 
-  tail.addEventListener('click', async () => {
+  const LINES = ['汪!休息一下也没关系。', '今天也写一点吧。', '你已经比昨天多懂一点了。', '慢慢来,不着急。', '写下来,就记住了。', '我在这儿陪着你。', '摸摸头,继续加油。'];
+  let last = -1, bubbleTimer = 0;
+  function say(text: string, ms = 2600) {
+    bubble.textContent = text; bubble.classList.add('show');
+    clearTimeout(bubbleTimer); bubbleTimer = window.setTimeout(() => bubble.classList.remove('show'), ms);
+  }
+  const replay = (el: Element, cls: string) => { el.classList.remove(cls); void (el as HTMLElement).getBoundingClientRect(); el.classList.add(cls); };
+
+  /* ── pose state machine ─────────────────────────────────────────────── */
+  let sitTimer = 0;
+  function setPose(p: 'lie' | 'sit' | 'walk') { wrap.dataset.pose = p; }
+  function sitFor(ms: number) {
+    setPose('sit');
+    clearTimeout(sitTimer);
+    sitTimer = window.setTimeout(() => { if (!dragging) setPose('lie'); }, ms);
+  }
+
+  /* ── head: encouragement + sit ──────────────────────────────────────── */
+  svg.addEventListener('click', (e) => {
+    if (dragMoved) return; // a drag, not a tap
+    const t = e.target as Element;
+    if (t.closest('.pet-tail')) return;
+    // head hit zone lives inside <use>; test by y position within the head area instead
+    const pt = svgPoint(e);
+    if (pt && pt.y < 160 && pt.x > 125) {
+      let i; do { i = Math.floor(Math.random() * LINES.length); } while (i === last && LINES.length > 1);
+      last = i; say(LINES[i]); sitFor(3200);
+    }
+  });
+  function svgPoint(e: MouseEvent | PointerEvent) {
+    const r = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    let x = ((e.clientX - r.left) / r.width) * vb.width;
+    if (wrap.classList.contains('flip')) x = vb.width - x;
+    const y = ((e.clientY - r.top) / r.height) * vb.height;
+    return { x, y };
+  }
+
+  /* ── tail: sync ─────────────────────────────────────────────────────── */
+  svg.querySelectorAll('.pet-tail').forEach((tail) => tail.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (dragMoved) return;
     replay(tail, 'wag');
     const n = pending().count;
     if (n === 0) { say('都同步过啦,没有要发的。', 2400); return; }
@@ -156,9 +245,57 @@
     const r = await (window as any).__notebook?.syncAll?.();
     if (!r) { say('同步取消了。'); return; }
     say(r.ok ? '同步好了 ✓ 约 1~2 分钟后网站更新' : '没同步成功:' + (r.errors[0] || '未知错误'), 3800);
-  });
+  }));
 
-  for (const el of [head, tail]) el.addEventListener('keydown', (e: any) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.dispatchEvent(new MouseEvent('click')); } });
+  /* ── drag: walk ─────────────────────────────────────────────────────── */
+  let dragging = false, dragMoved = false;
+  let startX = 0, startY = 0, originLeft = 0, originBottom = 0, lastX = 0;
+  function applyPos(left: number, bottom: number) {
+    const maxL = window.innerWidth - wrap.offsetWidth - 4;
+    const maxB = window.innerHeight - wrap.offsetHeight - 4;
+    left = Math.max(4, Math.min(left, maxL)); bottom = Math.max(0, Math.min(bottom, maxB));
+    wrap.style.left = left + 'px'; wrap.style.bottom = bottom + 'px';
+    return { left, bottom };
+  }
+  svg.addEventListener('pointerdown', (e) => {
+    if ((e.target as Element).closest('.pet-tail')) return;
+    dragging = true; dragMoved = false;
+    startX = e.clientX; startY = e.clientY; lastX = e.clientX;
+    const r = wrap.getBoundingClientRect();
+    originLeft = r.left; originBottom = window.innerHeight - r.bottom;
+    svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    if (!dragMoved && Math.hypot(dx, dy) > 6) { dragMoved = true; clearTimeout(sitTimer); setPose('walk'); wrap.classList.add('dragging'); }
+    if (!dragMoved) return;
+    // face the direction of travel
+    if (Math.abs(e.clientX - lastX) > 2) wrap.classList.toggle('flip', e.clientX < lastX);
+    lastX = e.clientX;
+    applyPos(originLeft + dx, originBottom - dy);
+  });
+  const endDrag = (e: PointerEvent) => {
+    if (!dragging) return;
+    dragging = false;
+    try { svg.releasePointerCapture(e.pointerId); } catch {}
+    if (dragMoved) {
+      wrap.classList.remove('dragging');
+      const r = wrap.getBoundingClientRect();
+      try { localStorage.setItem(POS_KEY, JSON.stringify({ left: r.left, bottom: window.innerHeight - r.bottom })); } catch {}
+      setTimeout(() => setPose('lie'), 220);
+      setTimeout(() => (dragMoved = false), 50);
+    }
+  };
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+
+  // restore position
+  try {
+    const p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+    if (p) applyPos(p.left, p.bottom);
+  } catch {}
+  window.addEventListener('resize', () => { const r = wrap.getBoundingClientRect(); applyPos(r.left, window.innerHeight - r.bottom); });
 
   setTimeout(() => { const n = pending().count; say(n ? `有 ${n} 项还没发到网站上,点我尾巴可以同步。` : LINES[0], n ? 4200 : 2600); }, 1200);
 </script>

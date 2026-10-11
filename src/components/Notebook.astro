@@ -211,6 +211,16 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
   .nb-danger:hover { background: color-mix(in srgb, #b5434e 12%, transparent); color: #b5434e; }
   .nb-step { display: grid; place-items: center; flex-shrink: 0; width: 1.4rem; height: 1.4rem; border-radius: 999px; background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary); font-size: 0.7rem; font-weight: 700; }
 
+  @media (max-width: 760px) {
+    .nb-panes[data-view=split] { grid-template-columns: 1fr; }
+    .nb-body { padding: 0.9rem 0.9rem 0.5rem; }
+    .nb-title { font-size: 1.4rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { .nb-card { animation: none; } }
+</style>
+
+<style is:global>
+  /* List rows are injected by JS and don't carry Astro's scope attribute. */
   .nb-row { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.6rem 0.9rem; border-radius: 0.6rem; text-align: left; transition: background-color 0.15s; }
   .nb-row:hover { background: var(--muted); }
   .nb-row .t { flex: 1; min-width: 0; }
@@ -219,13 +229,6 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
   .nb-dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; flex-shrink: 0; }
   .nb-dot.dirty { background: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent); }
   .nb-dot.clean { background: var(--border); }
-
-  @media (max-width: 760px) {
-    .nb-panes[data-view=split] { grid-template-columns: 1fr; }
-    .nb-body { padding: 0.9rem 0.9rem 0.5rem; }
-    .nb-title { font-size: 1.4rem; }
-  }
-  @media (prefers-reduced-motion: reduce) { .nb-card { animation: none; } }
 </style>
 
 <script>
