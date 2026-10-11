@@ -37,19 +37,19 @@ const seed = JSON.stringify(COUNTDOWNS);
 </section>
 
 <style>
-  .cd-card { position: relative; padding: 1.5rem 1.5rem 1.25rem; min-height: 15rem; overflow: hidden; background: color-mix(in srgb, var(--card) 85%, var(--primary) 6%); }
-  .cd-head { display: flex; align-items: center; gap: 0.5rem; color: var(--ink-soft); font-size: 0.95rem; }
+  .cd-card { position: relative; padding: 1.25rem 1.35rem 1rem; min-height: 12.5rem; overflow: hidden; background: color-mix(in srgb, var(--card) 85%, var(--primary) 6%); }
+  .cd-head { display: flex; align-items: center; gap: 0.5rem; color: var(--ink-soft); font-size: 0.88rem; }
   .cd-label { outline: none; }
   .cd-label:focus { box-shadow: inset 0 -1px 0 var(--primary); }
   .cd-num-row { display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.9rem; }
-  .cd-num { font-family: var(--font-serif); font-size: 3.6rem; line-height: 1; font-weight: 500; letter-spacing: -0.01em; color: var(--foreground); }
-  .cd-unit { font-size: 1rem; color: var(--ink-soft); }
-  .cd-rule { width: 2.5rem; height: 1px; background: var(--border); margin: 1rem 0 0.75rem; }
-  .cd-date { font-size: 0.9rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .cd-num { font-family: var(--font-serif); font-size: 3rem; line-height: 1; font-weight: 500; letter-spacing: -0.01em; color: var(--foreground); }
+  .cd-unit { font-size: 0.9rem; color: var(--ink-soft); }
+  .cd-rule { width: 2.5rem; height: 1px; background: var(--border); margin: 0.8rem 0 0.6rem; }
+  .cd-date { font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
   .cd-note { font-size: 0.8rem; color: var(--muted-foreground); margin-top: 0.15rem; outline: none; min-height: 1.2em; }
   .cd-note:empty::before { content: '写一句话…'; opacity: 0.5; }
   .cd-note:focus { box-shadow: inset 0 -1px 0 var(--primary); }
-  .cd-mountain { position: absolute; right: 0.5rem; bottom: 2.4rem; width: 9rem; color: var(--ink-soft); pointer-events: none; }
+  .cd-mountain { position: absolute; right: 0.5rem; bottom: 2.2rem; width: 7.5rem; color: var(--ink-soft); pointer-events: none; }
   .cd-card.soon .cd-num { color: var(--primary); }
   .cd-card.past .cd-num { opacity: 0.45; }
   .cd-nav { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; margin-top: 0.9rem; }

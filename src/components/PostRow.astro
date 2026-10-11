@@ -35,19 +35,19 @@ const ph = hues[index % hues.length];
 
 <style>
   .post-row {
-    display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) auto; align-items: center; gap: 1.25rem;
-    padding: 1.1rem 0.25rem; border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: 5.75rem minmax(0, 1fr) auto; align-items: center; gap: 1rem;
+    padding: 0.9rem 0.25rem; border-bottom: 1px solid var(--border);
     transition: background-color 0.15s;
   }
   .post-row:last-child { border-bottom: 0; }
   .post-row:hover { background: color-mix(in srgb, var(--muted) 50%, transparent); }
-  .post-thumb { width: 6.5rem; height: 4.4rem; overflow: hidden; border-radius: 0.4rem; background: var(--muted); }
+  .post-thumb { width: 5.75rem; height: 3.9rem; overflow: hidden; border-radius: 0.4rem; background: var(--muted); }
   .post-thumb :global(img), .post-thumb > div { transition: transform 0.5s ease; }
   .post-row:hover .post-thumb :global(img), .post-row:hover .post-thumb > div { transform: scale(1.04); }
-  .post-title { font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500; letter-spacing: 0.01em; color: var(--foreground); line-height: 1.45; }
+  .post-title { font-family: var(--font-serif); font-size: 0.98rem; font-weight: 500; letter-spacing: 0.01em; color: var(--foreground); line-height: 1.45; }
   .post-row:hover .post-title { color: var(--primary); }
-  .post-summary { margin-top: 0.3rem; font-size: 0.82rem; color: var(--muted-foreground); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-  .post-date { font-size: 0.78rem; color: var(--muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .post-summary { margin-top: 0.25rem; font-size: 0.78rem; color: var(--muted-foreground); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .post-date { font-size: 0.74rem; color: var(--muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }
   @media (max-width: 640px) {
     .post-row { grid-template-columns: 5rem minmax(0, 1fr); gap: 0.9rem; }
     .post-thumb { width: 5rem; height: 3.5rem; }

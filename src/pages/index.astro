@@ -17,16 +17,16 @@ const total = Math.max(1, Math.ceil(notes.length / SITE.postsPerPage));
 
 <BaseLayout>
   {/* ── top row: sticky · countdown ── */}
-  <section class="grid gap-6 pt-4 md:grid-cols-2 lg:grid-cols-[1.15fr_1fr]">
+  <section class="grid gap-5 pt-2 md:grid-cols-2 lg:grid-cols-[1.15fr_1fr]">
     <StickyNotes />
     <Countdowns />
   </section>
 
   {/* ── main: posts · sidebar ── */}
-  <div class="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
-    <section class="card reveal px-6 pb-3 pt-5">
+  <div class="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_15.5rem]">
+    <section class="card reveal px-5 pb-2 pt-4">
       <header class="mb-2 flex items-center justify-between">
-        <h2 class="serif text-lg">我的博客</h2>
+        <h2 class="serif text-base">我的博客</h2>
         <div class="flex items-center gap-3">
           <button type="button" class="nb-open chip hidden">✎ 写一页</button>
           <a href={withBase('/archive/')} class="text-xs text-muted-foreground hover:text-foreground">查看更多 →</a>

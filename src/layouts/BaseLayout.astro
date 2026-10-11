@@ -51,7 +51,7 @@ const fullTitle = title ? `${title} · ${SITE.title}` : SITE.title;
   </head>
   <body class="flex min-h-screen flex-col">
     <Navbar />
-    <main class:list={['shell relative z-10 flex-1 py-8', narrow && 'max-w-[var(--site-shell-narrow-max)]']}>
+    <main class:list={['shell relative z-10 flex-1 py-6', narrow && 'max-w-[var(--site-shell-narrow-max)]']}>
       <slot />
     </main>
     <Footer />
