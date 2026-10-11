@@ -275,14 +275,16 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
     (el('draft') as HTMLInputElement).checked = n.draft; bodyEl.value = n.body;
   }
   function refreshState() {
-    if (!cur) { stateEl.textContent = '新的一页'; syncBtn.classList.add('hidden'); delBtn.classList.add('hidden'); slugEl.textContent = ''; return; }
+    if (!cur) { stateEl.textContent = guestHint() || '新的一页'; syncBtn.classList.add('hidden'); delBtn.classList.add('hidden'); slugEl.textContent = ''; return; }
     const dirty = isDirty(cur);
     slugEl.textContent = cur.slug + '.md';
     delBtn.classList.remove('hidden');
     if (devMode) { stateEl.textContent = '本地模式 · 保存即生效'; syncBtn.classList.add('hidden'); return; }
     syncBtn.classList.toggle('hidden', !dirty);
+    if (!getToken()) { stateEl.textContent = '写的东西存在本机 · 点「同步」可设置发布'; return; }
     stateEl.textContent = cur.syncedAt ? (dirty ? `有未同步的修改 · 上次同步 ${ago(cur.syncedAt)}` : `已同步 · ${ago(cur.syncedAt)}`) : '只在本地,还没同步到网站';
   }
+  const guestHint = () => (devMode || getToken() ? '' : '写的东西存在本机 · 想发布时点「同步」');
 
   /* ── autosave ───────────────────────────────────────────────────────── */
   function autosave() {

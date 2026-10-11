@@ -79,7 +79,7 @@ const tilt = (i: number) => [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2][i % 6];
   const tilt = (i: number) => [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2][i % 6];
 
   // Owner? (same rule as BaseLayout). Visitors keep the server-rendered notes.
-  const isOwner = () => { try { return Boolean(localStorage.getItem('gh:token') || localStorage.getItem('notebook:owner') || Object.keys(JSON.parse(localStorage.getItem('notebook:v1') || '{}').notes || {}).length); } catch { return false; } };
+  const isOwner = () => true; // always editable; publishing still needs a token
 
   function render() {
     const list = load().stickies;

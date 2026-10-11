@@ -42,7 +42,7 @@ const seed = JSON.stringify(COUNTDOWNS);
   const list = document.getElementById('cd-list')!;
   const addBtn = document.getElementById('cd-add') as HTMLButtonElement;
 
-  const isOwner = () => { try { return Boolean(localStorage.getItem('gh:token') || localStorage.getItem('notebook:owner') || Object.keys(JSON.parse(localStorage.getItem('notebook:v1') || '{}').notes || {}).length); } catch { return false; } };
+  const isOwner = () => true; // always editable; publishing still needs a token
 
   function label(d: number) {
     if (d === 0) return '就是今天';
