@@ -6,7 +6,6 @@ import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
 import ThemePicker from '../components/ThemePicker.astro';
 import ScrollToTop from '../components/ScrollToTop.astro';
-import LightDust from '../components/LightDust.astro';
 import Mascot from '../components/Mascot.astro';
 import FocusClock from '../components/FocusClock.astro';
 import Notebook from '../components/Notebook.astro';
@@ -51,7 +50,6 @@ const fullTitle = title ? `${title} · ${SITE.title}` : SITE.title;
     </script>
   </head>
   <body class="flex min-h-screen flex-col">
-    <LightDust />
     <Navbar />
     <main class:list={['shell relative z-10 flex-1 py-8', narrow && 'max-w-[var(--site-shell-narrow-max)]']}>
       <slot />

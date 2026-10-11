@@ -1,8 +1,11 @@
 {
-  "title": "我的本子",
-  "description": "把想到的写出来,慢慢补成一本书。",
-  "author": "我",
+  "title": "hard2exp",
+  "tagline": "记录生活 · 思考 · 成长",
+  "description": "hard2exp — 随手写下的生活、思考和成长。",
+  "author": "hard2exp",
   "slogan": "把想到的写出来吧。",
+  "quote": "愿你在平凡的日子里\n也能找到属于自己的光。",
+  "motto": "Stay hungry · Stay curious",
   "footer": "随手写,慢慢改 · 本地写作,想发才发",
   "postsPerPage": 10,
   "github": {

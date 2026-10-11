@@ -1,6 +1,5 @@
 import site from '../data/site.json';
 import galleryData from '../data/gallery.json';
-import nowPlayingData from '../data/now-playing.json';
 import guestbookData from '../data/guestbook.json';
 import interactions from '../data/interactions.json';
 import stickiesData from '../data/stickies.json';
@@ -15,7 +14,10 @@ export interface SiteConfig {
   title: string;
   description: string;
   author: string;
+  tagline: string;
   slogan: string;
+  quote: string;
+  motto: string;
   footer: string;
   postsPerPage: number;
   /** Where the hosted site's "write/edit" buttons commit to. */
@@ -26,12 +28,7 @@ export interface SiteConfig {
 const NAV: NavItem[] = [
   { label: '首页', href: '/' },
   { label: '归档', href: '/archive/' },
-  { label: '分类', href: '/category/' },
   { label: '标签', href: '/tag/' },
-  { label: '相册', href: '/gallery/' },
-  { label: '在听', href: '/now-playing/' },
-  { label: '浪费时间', href: '/time/' },
-  { label: '留言板', href: '/guestbook/' },
   { label: '关于', href: '/about/' },
 ];
 
@@ -40,7 +37,7 @@ export const SITE_NAV = NAV;
 
 /* ── 便利贴 / 倒计时(发布版默认值;本地可改,同步后写回) ──────────── */
 export interface StickyNote { id: string; text: string; color: string; createdAt: number }
-export interface Countdown { id: string; label: string; date: string }
+export interface Countdown { id: string; label: string; date: string; note?: string }
 export const STICKIES: StickyNote[] = (stickiesData.stickies || []) as StickyNote[];
 export const COUNTDOWNS: Countdown[] = (countdownsData.countdowns || []) as Countdown[];
 
@@ -70,37 +67,6 @@ export const ALBUMS: Album[] = (galleryData.albums || []) as Album[];
 export const ALL_PHOTOS = ALBUMS.flatMap((a) =>
   a.photos.map((p) => ({ ...p, album: a.title, date: a.date })),
 );
-
-/* ── 在听什么(网易云) ─────────────────────────────────────────────────── */
-export interface Track {
-  title: string;
-  artist?: string;
-  neteaseId?: string;
-  cover?: string;
-  /** Plain text or LRC ("[mm:ss.xx] line"). Shown beside the turntable. */
-  lyrics?: string;
-}
-export interface Playlist {
-  title: string;
-  description?: string;
-  /** 网易云歌单 ID。填了整单可播;不填则逐首列 tracks。 */
-  neteaseId?: string;
-  tracks?: Track[];
-}
-export interface NowPlayingConfig {
-  nowPlaying: Track;
-  playlists: Playlist[];
-}
-export const NOW_PLAYING = nowPlayingData as NowPlayingConfig;
-
-/**
- * 网易云官方外链播放器。type: 2 = 单曲, 0 = 歌单。
- * auto=1 会自动播放(浏览器可能拦截,唱片机点击后再加载就不会被拦)。
- */
-export function neteaseEmbedUrl(id: string, kind: 'song' | 'playlist' = 'song', auto = 0) {
-  const type = kind === 'playlist' ? 0 : 2;
-  return `https://music.163.com/outchain/player?type=${type}&id=${id}&auto=${auto}&height=66`;
-}
 
 /* ── 留言板 ────────────────────────────────────────────────────────────── */
 export interface GuestbookEntry {

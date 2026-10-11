@@ -1,0 +1,56 @@
+---
+// One row in the post list: thumbnail · title + summary · date. Hairline divider.
+import { Image } from 'astro:assets';
+import { noteHref, formatDate, type Note } from '../lib/content';
+
+interface Props { note: Note; index?: number }
+const { note, index = 0 } = Astro.props;
+const { title, date, summary, cover, category } = note.data;
+// Deterministic soft placeholder when there's no cover.
+const hues = ['#d9e3ea', '#e6dfd3', '#dfe4d8', '#e4dde6', '#dbe4e3', '#e8ddd3'];
+const ph = hues[index % hues.length];
+---
+
+<a href={noteHref(note)} class="post-row reveal group" style={`animation-delay:${Math.min(index, 8) * 50}ms`}>
+  <div class="post-thumb">
+    {
+      cover ? (
+        <Image src={cover} alt={title} width={240} height={160} class="h-full w-full object-cover" loading="lazy" />
+      ) : (
+        <div class="h-full w-full" style={`background: linear-gradient(135deg, ${ph}, color-mix(in srgb, ${ph} 70%, white))`}>
+          <svg viewBox="0 0 120 80" class="h-full w-full opacity-40" fill="none" stroke="#5b6066" stroke-width="1" stroke-linejoin="round">
+            <path d="M0 70 L30 40 L48 54 L70 24 L92 50 L120 36"/><circle cx="96" cy="20" r="6"/>
+          </svg>
+        </div>
+      )
+    }
+  </div>
+  <div class="post-body">
+    <h3 class="post-title">{title}</h3>
+    {summary && <p class="post-summary">{summary}</p>}
+    {!summary && category && <p class="post-summary">{category}</p>}
+  </div>
+  <time class="post-date" datetime={date.toISOString()}>{formatDate(date)}</time>
+</a>
+
+<style>
+  .post-row {
+    display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) auto; align-items: center; gap: 1.25rem;
+    padding: 1.1rem 0.25rem; border-bottom: 1px solid var(--border);
+    transition: background-color 0.15s;
+  }
+  .post-row:last-child { border-bottom: 0; }
+  .post-row:hover { background: color-mix(in srgb, var(--muted) 50%, transparent); }
+  .post-thumb { width: 6.5rem; height: 4.4rem; overflow: hidden; border-radius: 0.4rem; background: var(--muted); }
+  .post-thumb :global(img), .post-thumb > div { transition: transform 0.5s ease; }
+  .post-row:hover .post-thumb :global(img), .post-row:hover .post-thumb > div { transform: scale(1.04); }
+  .post-title { font-family: var(--font-serif); font-size: 1.05rem; font-weight: 500; letter-spacing: 0.01em; color: var(--foreground); line-height: 1.45; }
+  .post-row:hover .post-title { color: var(--primary); }
+  .post-summary { margin-top: 0.3rem; font-size: 0.82rem; color: var(--muted-foreground); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .post-date { font-size: 0.78rem; color: var(--muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  @media (max-width: 640px) {
+    .post-row { grid-template-columns: 5rem minmax(0, 1fr); gap: 0.9rem; }
+    .post-thumb { width: 5rem; height: 3.5rem; }
+    .post-date { grid-column: 2; font-size: 0.72rem; }
+  }
+</style>

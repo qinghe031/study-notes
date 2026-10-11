@@ -6,13 +6,12 @@ import { withBase } from '../lib/url';
 // the navbar — reach it at /admin/.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
-import { GUESTBOOK_ENTRIES, NOW_PLAYING, ALBUMS } from '../lib/site';
+import { GUESTBOOK_ENTRIES, ALBUMS } from '../lib/site';
 import { getNotes, formatDate } from '../lib/content';
 
 const notes = await getNotes();
 const today = formatDate(new Date());
 const guestbookJson = JSON.stringify({ note: '留言板。', entries: GUESTBOOK_ENTRIES }, null, 2);
-const nowPlayingJson = JSON.stringify({ note: '在听什么。填网易云歌曲 ID 即可。', ...NOW_PLAYING }, null, 2);
 const galleryJson = JSON.stringify({ note: '相册。', albums: ALBUMS }, null, 2);
 ---
 
@@ -38,7 +37,6 @@ const galleryJson = JSON.stringify({ note: '相册。', albums: ALBUMS }, null, 
   <div class="admin-tabs mb-6 flex flex-wrap gap-1 rounded-xl bg-muted p-1 text-sm">
     <button data-tab="note" class="tab-btn rounded-lg px-4 py-1.5" aria-selected="true">写笔记</button>
     <button data-tab="guest" class="tab-btn rounded-lg px-4 py-1.5">留言</button>
-    <button data-tab="music" class="tab-btn rounded-lg px-4 py-1.5">在听什么</button>
     <button data-tab="gallery" class="tab-btn rounded-lg px-4 py-1.5">相册</button>
     <button data-tab="overview" class="tab-btn rounded-lg px-4 py-1.5">总览</button>
   </div>
@@ -94,46 +92,6 @@ const galleryJson = JSON.stringify({ note: '相册。', albums: ALBUMS }, null, 
     </div>
   </section>
 
-  {/* ── 在听什么 ───────────────────────────────────────────────────────── */}
-  <section data-panel="music" class="admin-panel hidden grid gap-6 lg:grid-cols-2">
-    <div class="card space-y-4 p-5">
-      <div>
-        <p class="mb-2 text-sm font-medium">正在听</p>
-        <div class="space-y-2">
-          <input id="np-link" class="inp" placeholder="粘贴网易云链接,如 https://music.163.com/song?id=1234567" />
-          <div class="grid grid-cols-2 gap-2">
-            <input id="np-title" class="inp" placeholder="歌名" />
-            <input id="np-artist" class="inp" placeholder="歌手" />
-          </div>
-          <button type="button" id="np-set" class="chip">设为正在听</button>
-        </div>
-      </div>
-      <hr class="border-border" />
-      <div>
-        <p class="mb-2 text-sm font-medium">新建歌单</p>
-        <div class="space-y-2">
-          <input id="pl-title" class="inp" placeholder="歌单名,如:专注学习" />
-          <input id="pl-desc" class="inp" placeholder="一句描述(可选)" />
-          <input id="pl-link" class="inp" placeholder="网易云歌单链接(有的话整单可播)" />
-          <button type="button" id="pl-add" class="chip">添加歌单</button>
-        </div>
-      </div>
-      <p class="text-xs text-muted-foreground">
-        从网易云「分享 → 复制链接」粘贴即可,脚本会自动提取 ID。不需要账号或密钥。
-      </p>
-    </div>
-    <div class="card flex flex-col p-5">
-      <div class="mb-2 flex items-center justify-between gap-2">
-        <p class="text-xs text-muted-foreground">保存到 <code class="rounded bg-muted px-1 py-0.5">src/data/now-playing.json</code></p>
-        <div class="flex gap-2">
-          <button type="button" data-save="music-out" data-path="src/data/now-playing.json" class="chip save-btn hidden">保存到项目</button>
-          <button type="button" data-copy="music-out" class="chip">复制</button>
-          <button type="button" data-download="music-out" data-filename="now-playing.json" class="chip">下载</button>
-        </div>
-      </div>
-      <textarea id="music-out" class="inp flex-1 font-mono text-[12px]" rows="24">{nowPlayingJson}</textarea>
-    </div>
-  </section>
 
   {/* ── 相册 ───────────────────────────────────────────────────────────── */}
   <section data-panel="gallery" class="admin-panel hidden grid gap-6 lg:grid-cols-2">
@@ -166,7 +124,6 @@ const galleryJson = JSON.stringify({ note: '相册。', albums: ALBUMS }, null, 
       {[
         ['笔记', notes.length],
         ['留言', GUESTBOOK_ENTRIES.length],
-        ['歌单', (NOW_PLAYING.playlists || []).length],
         ['相册', ALBUMS.length],
       ].map(([k, v]) => (
         <div class="card p-5">
@@ -333,15 +290,6 @@ const galleryJson = JSON.stringify({ note: '相册。', albums: ALBUMS }, null, 
     q<HTMLTextAreaElement>(id).value = JSON.stringify(obj, null, 2);
   }
   /** Extract a NetEase id + kind from a share link, a raw id, or a netease: URI. */
-  function neteaseId(link: string): { kind: 'song' | 'playlist'; id: string } | null {
-    const s = link.trim();
-    const m = s.match(/music\.163\.com\/(?:#\/)?(song|playlist|album)\?[^#]*\bid=(\d+)/);
-    if (m) return { kind: m[1] === 'song' ? 'song' : 'playlist', id: m[2] };
-    const q = s.match(/[?&]id=(\d+)/);
-    if (q) return { kind: /playlist/.test(s) ? 'playlist' : 'song', id: q[1] };
-    if (/^\d{4,}$/.test(s)) return { kind: 'song', id: s };
-    return null;
-  }
 
   /* ── note ──────────────────────────────────────────────────────────── */
   const noteForm = q<HTMLFormElement>('note-form');
@@ -395,39 +343,7 @@ const galleryJson = JSON.stringify({ note: '相册。', albums: ALBUMS }, null, 
     (q<HTMLFormElement>('guest-form').elements.namedItem('message') as HTMLTextAreaElement).value = '';
   });
 
-  /* ── music ─────────────────────────────────────────────────────────── */
-  q('np-set').addEventListener('click', () => {
-    const s = neteaseId(q<HTMLInputElement>('np-link').value);
-    if (!s) return alert('没识别出网易云 ID,请粘贴完整链接或直接填数字 ID。');
-    const data = readJson('music-out');
-    if (!data) return;
-    data.nowPlaying = {
-      title: q<HTMLInputElement>('np-title').value.trim(),
-      artist: q<HTMLInputElement>('np-artist').value.trim(),
-      neteaseId: s.id,
-    };
-    writeJson('music-out', data);
-  });
-  q('pl-add').addEventListener('click', () => {
-    const title = q<HTMLInputElement>('pl-title').value.trim();
-    if (!title) return alert('歌单名必填。');
-    const link = q<HTMLInputElement>('pl-link').value.trim();
-    const s = link ? neteaseId(link) : null;
-    if (link && !s) return alert('歌单链接没识别出 ID。');
-    const data = readJson('music-out');
-    if (!data) return;
-    data.playlists = data.playlists || [];
-    data.playlists.push({
-      title,
-      description: q<HTMLInputElement>('pl-desc').value.trim() || undefined,
-      neteaseId: s ? s.id : '',
-      tracks: [],
-    });
-    writeJson('music-out', data);
-    q<HTMLInputElement>('pl-title').value = '';
-    q<HTMLInputElement>('pl-desc').value = '';
-    q<HTMLInputElement>('pl-link').value = '';
-  });
+
 
   /* ── gallery ───────────────────────────────────────────────────────── */
   q('al-add').addEventListener('click', () => {

@@ -40,6 +40,7 @@ export interface Countdown {
   id: string;
   label: string;
   date: string;        // YYYY-MM-DD
+  note?: string;       // one line under the date
 }
 
 export interface Notebook {

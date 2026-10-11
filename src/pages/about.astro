@@ -1,4 +1,5 @@
 ---
+import { withBase } from '../lib/url';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import { SITE } from '../lib/site';
@@ -17,8 +18,7 @@ const links = [
     <h2>有什么</h2>
     <ul>
       <li><strong>笔记</strong> — 首页文章流,按分类、标签、年份归档,全文搜索。</li>
-      <li><strong>生活相册</strong> — 偶尔拍的照片。</li>
-      <li><strong>在听什么</strong> — 首页的唱片机,点一下就能放;也有歌单页。</li>
+      <li><strong>生活相册</strong> — 偶尔拍的照片。<a href={withBase("/gallery/")}>去看看</a></li>
       <li><strong>留言板</strong> — 路过留句话。</li>
     </ul>
     <h2>它是怎么工作的</h2>

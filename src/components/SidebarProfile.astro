@@ -1,0 +1,45 @@
+---
+// Sidebar: a quote card, then tags, then the site signature at the bottom.
+import { SITE } from '../lib/site';
+import { getNotes, getTags } from '../lib/content';
+import { withBase } from '../lib/url';
+
+const notes = await getNotes();
+const tags = getTags(notes).slice(0, 12);
+const quoteLines = (SITE.quote || '').split('\n');
+---
+
+<aside class="space-y-5">
+  {/* quote */}
+  <section class="card reveal p-6">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" class="mb-3 opacity-70">
+      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/>
+    </svg>
+    <p class="serif text-[1.02rem] leading-loose text-foreground">
+      {quoteLines.map((l, i) => <>{l}{i < quoteLines.length - 1 && <br />}</>)}
+    </p>
+    <div class="mt-4 h-px w-8 bg-border"></div>
+  </section>
+
+  {/* tags */}
+  <section class="card reveal p-6">
+    <h3 class="mb-3 text-sm tracking-wide text-muted-foreground">标签</h3>
+    <div class="flex flex-wrap gap-2">
+      {
+        tags.map((t) => (
+          <a href={withBase(`/tag/${t.slug}/`)} class="chip">#{t.name}</a>
+        ))
+      }
+    </div>
+  </section>
+
+  {/* signature */}
+  <section class="reveal pt-2 text-center">
+    <svg viewBox="0 0 200 54" class="mx-auto w-36 text-muted-foreground opacity-60" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round">
+      <path d="M0 52 L40 22 L62 36 L92 10 L120 34 L140 22 L176 46 L200 36" opacity="0.6"/>
+      <path d="M28 52 L66 30 L100 48 L142 26 L200 52" opacity="0.3"/>
+    </svg>
+    <p class="serif mt-2 text-base tracking-[0.12em] text-foreground">—— {SITE.title} ——</p>
+    <p class="mt-1 text-[0.7rem] tracking-[0.08em] text-muted-foreground">{SITE.motto}</p>
+  </section>
+</aside>

@@ -1,93 +1,128 @@
 ---
-// 倒计时 — sits beside the homepage title. Rendered from published JSON for
-// visitors; the owner can add/remove/edit them in place.
+// Countdown card — big number, the date, a line, a faint mountain in the corner.
+// Shows the nearest upcoming event; flip through others with the arrows. Local-first.
 import { COUNTDOWNS } from '../lib/site';
 const seed = JSON.stringify(COUNTDOWNS);
 ---
 
-<div id="countdowns" class="flex flex-wrap items-center gap-2" data-seed={seed}>
-  <div id="cd-list" class="flex flex-wrap gap-2">
-    {
-      COUNTDOWNS.map((c) => (
-        <span class="cd-pill" data-id={c.id} data-date={c.date}>
-          <span class="cd-label">{c.label}</span>
-          <span class="cd-days" />
-        </span>
-      ))
-    }
+<section id="countdowns" class="cd-card card reveal" data-seed={seed}>
+  <header class="cd-head">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <span id="cd-label" class="cd-label" contenteditable="true" spellcheck="false">距离下次旅行还有</span>
+  </header>
+
+  <div class="cd-num-row">
+    <span id="cd-num" class="cd-num">—</span>
+    <span class="cd-unit">天</span>
   </div>
-  <button type="button" id="cd-add" class="nb-owner chip hidden">+ 加个倒计时</button>
-</div>
+
+  <div class="cd-rule"></div>
+  <p id="cd-date" class="cd-date">—</p>
+  <p id="cd-note" class="cd-note" contenteditable="true" spellcheck="false"></p>
+
+  <svg class="cd-mountain" viewBox="0 0 200 60" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round">
+    <path d="M0 58 L40 26 L62 40 L90 12 L118 36 L136 24 L170 50 L200 40" opacity="0.35"/>
+    <path d="M30 58 L70 34 L100 52 L140 30 L200 58" opacity="0.2"/>
+  </svg>
+
+  <div class="cd-nav">
+    <button type="button" id="cd-prev" class="cd-arrow" aria-label="上一个">‹</button>
+    <span id="cd-count" class="cd-counter"></span>
+    <button type="button" id="cd-next" class="cd-arrow" aria-label="下一个">›</button>
+    <span class="mx-1 h-3 w-px bg-border"></span>
+    <button type="button" id="cd-add" class="cd-tool" title="加一个">＋</button>
+    <button type="button" id="cd-edit" class="cd-tool" title="改日期">⟲</button>
+    <button type="button" id="cd-del" class="cd-tool" title="移除">✕</button>
+  </div>
+</section>
 
 <style>
-  .cd-pill {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.2rem 0.7rem; border-radius: 9999px;
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
-    font-size: 0.8rem; color: var(--foreground);
-  }
-  .cd-days { font-weight: 700; color: var(--primary); }
-  .cd-pill.soon { background: color-mix(in srgb, #e8a33d 16%, transparent); border-color: color-mix(in srgb, #e8a33d 40%, transparent); }
-  .cd-pill.soon .cd-days { color: #c77f10; }
-  .cd-pill.past { opacity: 0.5; }
-  .cd-del { margin-left: -0.2rem; opacity: 0.5; font-size: 0.7rem; }
-  .cd-del:hover { opacity: 1; }
+  .cd-card { position: relative; padding: 1.5rem 1.5rem 1.25rem; min-height: 15rem; overflow: hidden; background: color-mix(in srgb, var(--card) 85%, var(--primary) 6%); }
+  .cd-head { display: flex; align-items: center; gap: 0.5rem; color: var(--ink-soft); font-size: 0.95rem; }
+  .cd-label { outline: none; }
+  .cd-label:focus { box-shadow: inset 0 -1px 0 var(--primary); }
+  .cd-num-row { display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.9rem; }
+  .cd-num { font-family: var(--font-serif); font-size: 3.6rem; line-height: 1; font-weight: 500; letter-spacing: -0.01em; color: var(--foreground); }
+  .cd-unit { font-size: 1rem; color: var(--ink-soft); }
+  .cd-rule { width: 2.5rem; height: 1px; background: var(--border); margin: 1rem 0 0.75rem; }
+  .cd-date { font-size: 0.9rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .cd-note { font-size: 0.8rem; color: var(--muted-foreground); margin-top: 0.15rem; outline: none; min-height: 1.2em; }
+  .cd-note:empty::before { content: '写一句话…'; opacity: 0.5; }
+  .cd-note:focus { box-shadow: inset 0 -1px 0 var(--primary); }
+  .cd-mountain { position: absolute; right: 0.5rem; bottom: 2.4rem; width: 9rem; color: var(--ink-soft); pointer-events: none; }
+  .cd-card.soon .cd-num { color: var(--primary); }
+  .cd-card.past .cd-num { opacity: 0.45; }
+  .cd-nav { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; margin-top: 0.9rem; }
+  .cd-arrow, .cd-tool { width: 1.6rem; height: 1.6rem; border-radius: 999px; font-size: 0.9rem; line-height: 1; color: var(--muted-foreground); transition: color 0.15s, background-color 0.15s; }
+  .cd-arrow:hover, .cd-tool:hover { color: var(--foreground); background: var(--muted); }
+  .cd-arrow:disabled { opacity: 0.3; pointer-events: none; }
+  .cd-counter { font-size: 0.7rem; color: var(--muted-foreground); min-width: 2rem; text-align: center; font-variant-numeric: tabular-nums; }
+  .cd-tool { font-size: 0.75rem; }
 </style>
 
 <script>
   import { load, setCountdowns, seedMisc, uid, daysUntil } from '../lib/notebook';
 
   const root = document.getElementById('countdowns')!;
-  const list = document.getElementById('cd-list')!;
-  const addBtn = document.getElementById('cd-add') as HTMLButtonElement;
+  const labelEl = document.getElementById('cd-label')!;
+  const numEl = document.getElementById('cd-num')!;
+  const dateEl = document.getElementById('cd-date')!;
+  const noteEl = document.getElementById('cd-note')!;
+  const counter = document.getElementById('cd-count')!;
+  const prev = document.getElementById('cd-prev') as HTMLButtonElement;
+  const next = document.getElementById('cd-next') as HTMLButtonElement;
+  let idx = 0;
 
-  const isOwner = () => true; // always editable; publishing still needs a token
+  seedMisc([], JSON.parse(root.dataset.seed || '[]'));
 
-  function label(d: number) {
-    if (d === 0) return '就是今天';
-    if (d > 0) return `还有 ${d} 天`;
-    return `已过 ${-d} 天`;
+  const list = () => load().countdowns;
+  function show(i: number) {
+    const l = list();
+    if (!l.length) { labelEl.textContent = '还没有倒计时'; numEl.textContent = '—'; dateEl.textContent = '点 ＋ 加一个'; noteEl.textContent = ''; counter.textContent = '0 / 0'; prev.disabled = next.disabled = true; root.classList.remove('soon', 'past'); return; }
+    idx = Math.max(0, Math.min(i, l.length - 1));
+    const c = l[idx];
+    const d = daysUntil(c.date);
+    labelEl.textContent = c.label;
+    numEl.textContent = String(Math.abs(d));
+    dateEl.textContent = c.date;
+    noteEl.textContent = c.note || '';
+    root.classList.toggle('soon', d >= 0 && d <= 7);
+    root.classList.toggle('past', d < 0);
+    counter.textContent = `${idx + 1} / ${l.length}`;
+    prev.disabled = idx === 0; next.disabled = idx === l.length - 1;
   }
-
-  function render() {
-    const items = load().countdowns;
-    list.innerHTML = '';
-    for (const c of items) {
-      const d = daysUntil(c.date);
-      const el = document.createElement('span');
-      el.className = 'cd-pill' + (d >= 0 && d <= 7 ? ' soon' : '') + (d < 0 ? ' past' : '');
-      el.dataset.id = c.id; el.dataset.date = c.date;
-      el.innerHTML = `<span>${esc(c.label)}</span><span class="cd-days">${label(d)}</span>`;
-      if (isOwner()) {
-        const x = document.createElement('button'); x.type = 'button'; x.className = 'cd-del'; x.textContent = '✕'; x.title = '移除';
-        x.onclick = () => { setCountdowns(load().countdowns.filter((i) => i.id !== c.id)); render(); };
-        el.appendChild(x);
-        el.onclick = (e) => {
-          if ((e.target as HTMLElement).classList.contains('cd-del')) return;
-          const nd = prompt(`「${c.label}」的日期(YYYY-MM-DD):`, c.date);
-          if (nd && /^\d{4}-\d{2}-\d{2}$/.test(nd)) { const cl = load().countdowns.map((i) => i.id === c.id ? { ...i, date: nd } : i); setCountdowns(cl); render(); }
-        };
-      }
-      list.appendChild(el);
-    }
-    if (!items.length && !isOwner()) root.classList.add('hidden');
-    else root.classList.remove('hidden');
+  function commit() {
+    const l = list(); if (!l[idx]) return;
+    l[idx].label = labelEl.textContent?.trim() || l[idx].label;
+    l[idx].note = noteEl.textContent?.trim() || '';
+    setCountdowns(l);
   }
-  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  // Sort upcoming first so the card opens on the nearest event.
+  (function sortOnce() { const l = list(); if (l.length > 1) { l.sort((a, b) => daysUntil(a.date) - daysUntil(b.date)); setCountdowns(l); } })();
 
-  if (isOwner()) {
-    seedMisc([], JSON.parse(root.dataset.seed || '[]'));
-    addBtn.classList.remove('hidden');
-    addBtn.onclick = () => {
-      const name = prompt('倒计时事件(比如:距离考试)');
-      if (!name) return;
-      const date = prompt('日期(YYYY-MM-DD)', new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
-      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-      const cl = load().countdowns; cl.push({ id: uid(), label: name, date }); setCountdowns(cl); render();
-    };
-    render();
-  } else {
-    render(); // fills in the day counts for visitors from server-rendered pills
+  let t = 0;
+  for (const el of [labelEl, noteEl]) {
+    el.addEventListener('input', () => { clearTimeout(t); t = window.setTimeout(commit, 400); });
+    el.addEventListener('blur', commit);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); (e.target as HTMLElement).blur(); } });
   }
+  prev.onclick = () => { commit(); show(idx - 1); };
+  next.onclick = () => { commit(); show(idx + 1); };
+  (document.getElementById('cd-add') as HTMLButtonElement).onclick = () => {
+    const label = prompt('倒计时事件(例如:距离下次旅行还有)', '距离 … 还有'); if (!label) return;
+    const date = prompt('日期(YYYY-MM-DD)', new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const l = list(); l.push({ id: uid(), label, date, note: '' }); setCountdowns(l); show(l.length - 1);
+  };
+  (document.getElementById('cd-edit') as HTMLButtonElement).onclick = () => {
+    const l = list(); if (!l[idx]) return;
+    const nd = prompt('新的日期(YYYY-MM-DD)', l[idx].date);
+    if (nd && /^\d{4}-\d{2}-\d{2}$/.test(nd)) { l[idx].date = nd; setCountdowns(l); show(idx); }
+  };
+  (document.getElementById('cd-del') as HTMLButtonElement).onclick = () => {
+    const l = list(); if (!l.length) return;
+    if (!confirm('移除这个倒计时?')) return;
+    l.splice(idx, 1); setCountdowns(l); show(Math.min(idx, l.length - 1));
+  };
+  show(0);
 </script>

@@ -1,55 +1,48 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Hero from '../components/Hero.astro';
-import PostCard from '../components/PostCard.astro';
-import Turntable from '../components/Turntable.astro';
-import FocusToday from '../components/FocusToday.astro';
 import StickyNotes from '../components/StickyNotes.astro';
-import TagsCloudCard from '../components/TagsCloudCard.astro';
-import CategoriesCard from '../components/CategoriesCard.astro';
-import RecentPostsCard from '../components/RecentPostsCard.astro';
+import Countdowns from '../components/Countdowns.astro';
+import PostRow from '../components/PostRow.astro';
+import SidebarProfile from '../components/SidebarProfile.astro';
+import FocusToday from '../components/FocusToday.astro';
 import Pagination from '../components/Pagination.astro';
-import { getNotes, getTags, getCategories } from '../lib/content';
+import { withBase } from '../lib/url';
+import { getNotes } from '../lib/content';
 import { SITE } from '../lib/site';
 
 const notes = await getNotes();
-const tags = getTags(notes);
-const categories = getCategories(notes);
 const page = notes.slice(0, SITE.postsPerPage);
 const total = Math.max(1, Math.ceil(notes.length / SITE.postsPerPage));
 ---
 
 <BaseLayout>
-  <Hero countdowns />
-
-  <div class="mb-10">
-    <Turntable />
-  </div>
-
-  <div class="mb-10">
+  {/* ── top row: sticky · countdown ── */}
+  <section class="grid gap-6 pt-4 md:grid-cols-2 lg:grid-cols-[1.15fr_1fr]">
     <StickyNotes />
-  </div>
+    <Countdowns />
+  </section>
 
-  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-    <section class="space-y-5">
-      <FocusToday />
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">最近写下的</h2>
-        <button type="button" class="nb-open chip hidden items-center gap-1 text-xs">✎ 写一页</button>
-      </div>
-      {page.length === 0 && (
-        <div class="card p-8 text-center text-muted-foreground">
-          本子还是空的。点右上角「写一页」开始吧。
+  {/* ── main: posts · sidebar ── */}
+  <div class="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
+    <section class="card reveal px-6 pb-3 pt-5">
+      <header class="mb-2 flex items-center justify-between">
+        <h2 class="serif text-lg">我的博客</h2>
+        <div class="flex items-center gap-3">
+          <button type="button" class="nb-open chip hidden">✎ 写一页</button>
+          <a href={withBase('/archive/')} class="text-xs text-muted-foreground hover:text-foreground">查看更多 →</a>
         </div>
-      )}
-      {page.map((n, i) => <PostCard note={n} index={i} />)}
+      </header>
+      <FocusToday />
+      {
+        page.length === 0 ? (
+          <p class="py-10 text-center text-sm text-muted-foreground">还是空的。点「写一页」开始。</p>
+        ) : (
+          page.map((n, i) => <PostRow note={n} index={i} />)
+        )
+      }
       <Pagination current={1} total={total} href={(p) => (p === 1 ? '/' : `/page/${p}/`)} />
     </section>
 
-    <aside class="space-y-5 lg:sticky lg:top-20 lg:self-start">
-      <RecentPostsCard notes={notes} />
-      <CategoriesCard categories={categories} />
-      <TagsCloudCard tags={tags} />
-    </aside>
+    <SidebarProfile />
   </div>
 </BaseLayout>

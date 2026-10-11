@@ -1,8 +1,8 @@
-# 学习笔记站
+# hard2exp
 
 本地用 Markdown 写笔记,一条命令生成可分享的静态网页。没有数据库、没有账号、没有服务器。
 
-布局参考 [arthurs-blog](https://github.com/ArthurloveLin/arthurs-blog),配色取自《光遇》的低饱和治愈风(云蓝底 + 8 套柔和主题色,亮暗双模式,漂浮光尘背景)。后端全部替换为本地文件 + 静态构建,互动功能可按需接入免费的 Giscus。
+布局参考 [arthurs-blog](https://github.com/ArthurloveLin/arthurs-blog),纸张灰白底、宋体标题、细线分隔,安静的生活博客风格。
 
 ## 模块
 
@@ -11,7 +11,6 @@
 | 文章流 / 分类 / 标签 / 归档 / 搜索 / 分页 | `/` `/category/` `/tag/` `/archive/` `/search/` | `src/content/notes/*.md` |
 | 文章页:目录 · 阅读进度 · 点赞 · 相关笔记 · 上下篇 · 评论 | `/notes/<slug>/` | 同上 + `interactions.json` |
 | 生活相册(全屏预览) | `/gallery/` | `src/data/gallery.json` + `public/gallery/` |
-| 在听什么(首页唱片机,点击即播;歌单页) | `/` `/now-playing/` | `src/data/now-playing.json`(网易云 ID) |
 | 留言板 | `/guestbook/` | `src/data/guestbook.json` 或 Giscus |
 | 后台管理(本地表单生成文件) | `/admin/`(不在导航里) | — |
 | 高达加油小人 | 每页右下角 | `src/components/Mascot.astro` |
@@ -35,9 +34,8 @@ npm run build:local    # 生成 dist-local/ → 打包发给别人,双击 index.
 |---|---|---|
 | 点赞 | 浏览器本地存储,离线可用 | — |
 | 评论 / 在线留言 | 显示接入提示 | 填 `src/data/interactions.json` 接 Giscus(免费、基于 GitHub Discussions) |
-| 网易云播放 | 官方外链播放器,不需要账号或密钥 | 个别版权歌曲外链不可播,换一首即可 |
 
-离线双击版:所有本地内容正常;网易云和 Giscus 需要联网。
+离线双击版:所有本地内容正常;Giscus 评论需要联网。
 
 ## 技术栈
 
