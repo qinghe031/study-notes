@@ -83,6 +83,17 @@ export function slugify(title: string, date: string) {
   return `${date}-${safe}`;
 }
 
+/**
+ * Filename for a brand-new page. Includes a short random id so two pages
+ * written the same day with the same (or still-being-typed) title can never
+ * collide and overwrite each other. The title part is just for readability.
+ */
+export function newSlug(title: string, date: string) {
+  const safe = title.replace(/[\\/:*?"<>|\s]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || '未命名';
+  const id = Math.random().toString(36).slice(2, 6);
+  return `${date}-${safe}-${id}`;
+}
+
 /* ── hashing (cheap, for dirty detection) ─────────────────────────────── */
 export function hash(s: string): string {
   let h = 5381;

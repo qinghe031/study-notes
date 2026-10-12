@@ -234,7 +234,7 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
 
 <script>
   import { marked } from 'marked';
-  import { load, getNote, upsertNote, removeNote, isDirty, slugify, today, ago, pending, fromMarkdown, toMarkdown, type NoteDraft } from '../lib/notebook';
+  import { load, getNote, upsertNote, removeNote, isDirty, newSlug, today, ago, pending, fromMarkdown, toMarkdown, type NoteDraft } from '../lib/notebook';
   import { syncNote, syncAll, deleteNoteRemote } from '../lib/sync';
   import { getToken, setToken, verifyToken, getFile, newTokenUrl, GH, actionsUrl } from '../lib/github';
 
@@ -290,7 +290,7 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
     const base: NoteDraft = cur || { slug: '', title: '', date, category: '', tags: [], summary: '', sticky: 0, draft: false, body: '', updatedAt: 0 };
     return {
       ...base,
-      slug: base.slug || slugify(title || '未命名', date),
+      slug: base.slug || newSlug(title || '未命名', date),
       title, date,
       category: el('category').value.trim(),
       tags: el('tags').value.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
