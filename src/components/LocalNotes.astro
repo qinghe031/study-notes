@@ -25,6 +25,7 @@
   .local-date { font-size: 0.74rem; color: var(--muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .local-badge { font-size: 0.65rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); white-space: nowrap; }
   .local-badge.synced { background: var(--muted); color: var(--muted-foreground); }
+  .local-badge.draft { background: color-mix(in srgb, #c9a040 18%, transparent); color: #8a6a14; }
   @media (max-width: 640px) { .local-row { grid-template-columns: 5rem minmax(0, 1fr); } .local-thumb { width: 5rem; height: 3.5rem; } .local-right { grid-column: 2; flex-direction: row; } }
 </style>
 
@@ -38,8 +39,10 @@
 
   function render() {
     const notes = Object.values(load().notes).sort((a, b) => b.updatedAt - a.updatedAt);
-    // Only show pages that aren't already on the site in their current form.
-    const local = notes.filter((n) => isDirty(n) || !n.syncedAt);
+    // Keep showing anything that is NOT visible on the public site yet:
+    // never synced, changed since sync, or synced but still marked as draft
+    // (the build skips drafts, so it won't appear in the list below).
+    const local = notes.filter((n) => isDirty(n) || !n.syncedAt || n.draft);
     root.classList.toggle('hidden', local.length === 0);
     syncBtn.classList.toggle('hidden', pending().count === 0);
     list.innerHTML = '';
@@ -47,10 +50,16 @@
       const row = document.createElement('button');
       row.type = 'button'; row.className = 'local-row';
       const firstLine = (n.summary || n.body.split('\n').find((l) => l.trim() && !l.startsWith('#')) || '').replace(/[#*`>_\-\[\]]/g, '').trim();
+      const dirty = isDirty(n);
+      let badge: string, cls = '';
+      if (n.draft) { badge = n.syncedAt ? '草稿 · 已同步但不公开' : '草稿 · 还没同步'; cls = 'draft'; }
+      else if (!n.syncedAt) badge = '还没同步';
+      else if (dirty) badge = '有改动未同步';
+      else { badge = '已同步'; cls = 'synced'; }
       row.innerHTML = `
         <span class="local-thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
         <span class="min-w-0"><span class="local-title">${esc(n.title || '(无标题)')}</span>${firstLine ? `<span class="local-sum">${esc(firstLine)}</span>` : ''}</span>
-        <span class="local-right"><span class="local-date">${n.date}</span><span class="local-badge ${n.syncedAt && !isDirty(n) ? 'synced' : ''}">${n.syncedAt ? '有改动未同步' : '还没同步'}${n.draft ? ' · 草稿' : ''}</span></span>`;
+        <span class="local-right"><span class="local-date">${n.date}</span><span class="local-badge ${cls}">${badge}</span></span>`;
       row.onclick = () => (window as any).__notebook?.open(n.slug);
       list.appendChild(row);
     }

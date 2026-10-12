@@ -34,7 +34,7 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
       <input name="category" placeholder="分类" list="nb-cats" />
       <input name="tags" placeholder="标签,逗号分隔" />
       <input name="summary" placeholder="一句话摘要(可空)" class="nb-meta-wide" />
-      <label class="nb-flag"><input name="draft" type="checkbox" /> 草稿</label>
+      <label class="nb-flag nb-flag--draft" title="勾上:同步后也不会出现在网站上,只有你自己能看到"><input name="draft" type="checkbox" /> 草稿(不公开)</label>
       <label class="nb-flag">置顶 <input name="sticky" type="number" min="0" value="0" class="nb-mini" /></label>
     </div>
 
@@ -159,6 +159,7 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
   .nb-meta-wide { flex: 1; min-width: 12rem; }
   .nb-flag { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--muted-foreground); }
   .nb-flag input[type=checkbox] { accent-color: var(--primary); }
+  .nb-flag--draft:has(input:checked) { color: #8a6a14; background: color-mix(in srgb, #c9a040 18%, transparent); padding: 0.2rem 0.5rem; border-radius: 0.4rem; }
   .nb-mini { width: 3.2rem !important; padding: 0.25rem 0.35rem !important; text-align: center; }
   .nb-inp { width: 100%; }
   .nb-meta input:focus, .nb-inp:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent); }
@@ -430,9 +431,13 @@ const categories = getCategories(await getNotes()).map((c) => c.name);
   /* ── sync one ───────────────────────────────────────────────────────── */
   syncBtn.onclick = async () => {
     clearTimeout(saveTimer); autosave(); if (!cur) return;
+    if (cur.draft && !confirm('这一页勾了「草稿(不公开)」。\n同步上去也不会出现在网站上,只是备份到仓库。\n\n要不要先取消草稿再同步?\n\n「确定」= 保持草稿、只备份   「取消」= 我先去掉草稿勾')) return;
     if (!(await ensureToken())) return;
     syncBtn.disabled = true; stateEl.textContent = '正在同步…';
-    try { await syncNote(cur); cur = getNote(cur.slug); refreshState(); stateEl.textContent = '已同步 ✓ 约 1~2 分钟后网站更新'; }
+    try {
+      await syncNote(cur); cur = getNote(cur.slug); refreshState();
+      stateEl.textContent = cur?.draft ? '已备份 ✓(草稿,网站上不显示)' : '已同步 ✓ 约 1~2 分钟后网站更新';
+    }
     catch (e: any) { stateEl.textContent = '✗ ' + (e?.message || e); }
     finally { syncBtn.disabled = false; }
   };
