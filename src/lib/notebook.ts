@@ -66,6 +66,7 @@ export function load(): Notebook {
 
 export function save(nb: Notebook) {
   try { localStorage.setItem(NB_KEY, JSON.stringify(nb)); } catch {}
+  dailySnapshot();
   window.dispatchEvent(new CustomEvent(NB_EVENT));
 }
 
@@ -234,6 +235,76 @@ export function seedMisc(stickies: Sticky[], countdowns: Countdown[]) {
     nb.miscSyncedHash = hash(JSON.stringify({ s: nb.stickies, c: nb.countdowns }));
     save(nb);
   }
+}
+
+/* ── safety net ───────────────────────────────────────────────────────── */
+
+/** Timestamp of the last successful push to GitHub (used to follow the build). */
+export const SYNC_AT_KEY = 'notebook:lastSyncAt';
+export function lastSyncAt(): number {
+  try { return Number(localStorage.getItem(SYNC_AT_KEY) || 0); } catch { return 0; }
+}
+export function markSyncAt(ts = Date.now()) {
+  try { localStorage.setItem(SYNC_AT_KEY, String(ts)); } catch {}
+}
+
+const BACKUP_PREFIX = 'notebook:backup:';
+const SNAP_MARK = 'notebook:lastSnapshot';
+
+/** One snapshot per day, keep the last 10. Cheap insurance against a bad edit,
+ *  an accidental delete, or clearing the browser. Runs on every save, but only
+ *  actually writes once per calendar day. */
+export function dailySnapshot() {
+  try {
+    const day = today();
+    if (localStorage.getItem(SNAP_MARK) === day) return;
+    const raw = localStorage.getItem(NB_KEY);
+    if (raw) {
+      localStorage.setItem(BACKUP_PREFIX + day, raw);
+      const keys = Object.keys(localStorage).filter((k) => k.startsWith(BACKUP_PREFIX)).sort();
+      for (const k of keys.slice(0, Math.max(0, keys.length - 10))) localStorage.removeItem(k);
+    }
+    localStorage.setItem(SNAP_MARK, day);
+  } catch {}
+}
+
+/** Everything, as a JSON string you can keep anywhere. */
+export function exportAll(): string {
+  return JSON.stringify(
+    { app: 'hard2exp-notebook', version: 1, exportedAt: new Date().toISOString(), data: load() },
+    null,
+    2,
+  );
+}
+
+/** Merge a backup back in. Never deletes: only adds or replaces older copies. */
+export function importAll(text: string): { added: number; updated: number; skipped: number } {
+  let src: any;
+  try { src = JSON.parse(text); } catch { throw new Error('不是有效的 JSON 文件'); }
+  src = src?.data ?? src;
+  if (!src || typeof src !== 'object' || typeof src.notes !== 'object' || src.notes === null) {
+    throw new Error('文件格式不对(缺少 notes)');
+  }
+  const nb = load();
+  let added = 0, updated = 0, skipped = 0;
+  for (const [slug, n] of Object.entries<any>(src.notes)) {
+    if (!n || typeof n.title !== 'string' || typeof n.body !== 'string' || !slug) { skipped++; continue; }
+    const cur = nb.notes[slug];
+    if (!cur) { nb.notes[slug] = n; added++; }
+    else if ((n.updatedAt || 0) > (cur.updatedAt || 0)) { nb.notes[slug] = n; updated++; }
+    else skipped++;
+  }
+  for (const s of src.stickies || []) {
+    if (s?.id && !nb.stickies.some((x) => x.id === s.id)) nb.stickies.push(s);
+  }
+  for (const c of src.countdowns || []) {
+    if (c?.id && !nb.countdowns.some((x) => x.id === c.id)) nb.countdowns.push(c);
+  }
+  for (const slug of Object.keys(src.deleted || {})) {
+    if (!nb.notes[slug]) nb.deleted[slug] = true;
+  }
+  save(nb);
+  return { added, updated, skipped };
 }
 
 /* ── time helpers ─────────────────────────────────────────────────────── */

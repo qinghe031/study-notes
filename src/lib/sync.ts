@@ -1,7 +1,7 @@
 // Sync local notebook → GitHub. Only what you explicitly push becomes public.
 // Runs against the Contents API, one commit per note (plus one for stickies +
 // countdowns), so the site rebuilds and others can see it.
-import { load, toMarkdown, markSynced, pending, markMiscSynced, clearTombstone, type NoteDraft } from './notebook';
+import { load, toMarkdown, markSynced, pending, markMiscSynced, clearTombstone, markSyncAt, type NoteDraft } from './notebook';
 import { getToken, getFile, putFile, deleteFile } from './github';
 
 export interface SyncResult {
@@ -51,6 +51,7 @@ export async function syncAll(): Promise<SyncResult> {
   if (!getToken()) { res.ok = false; res.errors.push('还没有设置 GitHub 令牌'); return res; }
 
   const p = pending();
+  const before = Date.now();
   for (const slug of p.deletions) {
     try { await deleteNoteRemote(slug); res.deleted++; }
     catch (e: any) { res.ok = false; res.errors.push(`删除 ${slug}:${e?.message || e}`); }
@@ -63,5 +64,6 @@ export async function syncAll(): Promise<SyncResult> {
     try { await syncMisc(); res.pushed++; }
     catch (e: any) { res.ok = false; res.errors.push(`便利贴/倒计时:${e?.message || e}`); }
   }
+  if (res.pushed || res.deleted) markSyncAt(before);
   return res;
 }

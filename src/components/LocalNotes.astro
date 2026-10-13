@@ -1,19 +1,38 @@
 ---
-// Pages that exist only in this browser (not yet synced) — shown at the top of
-// the homepage list so what you just wrote is visible immediately. Rendered
-// client-side from localStorage; empty for visitors.
+// 「本机上的页」— every page written in this browser, with its live status.
+//
+// This is the owner's notebook index. It deliberately shows ALL local pages
+// (not just unsynced ones) so a page never "disappears" from view: after you
+// sync, it stays here showing 正在上线… → 已上线 ✓ (or 构建失败), while the
+// public list below catches up a minute later.
+//
+// Visitors have no local pages, so this whole block stays hidden for them.
 ---
 
 <div id="local-notes" class="hidden">
   <p class="local-notes-head">
-    <span>本机上的页</span>
-    <button type="button" id="local-sync-all" class="chip hidden">同步全部到网站</button>
+    <span>本机上的页 <em id="local-count"></em></span>
+    <span class="flex items-center gap-1.5">
+      <button type="button" id="local-export" class="chip" title="把所有本机笔记存成一个文件">导出备份</button>
+      <button type="button" id="local-import" class="chip" title="从备份文件恢复">导入</button>
+      <input id="local-import-file" type="file" accept="application/json,.json" class="hidden" />
+      <button type="button" id="local-sync-all" class="chip hidden">同步全部</button>
+    </span>
   </p>
+
+  <!-- deploy progress: visible from the moment you sync until the build finishes -->
+  <div id="local-deploy" class="deploy hidden">
+    <span id="deploy-spin" class="deploy-spin" aria-hidden="true"></span>
+    <span id="deploy-text"></span>
+    <a id="deploy-link" href="#" target="_blank" rel="noopener" class="deploy-link">查看</a>
+  </div>
+
   <div id="local-notes-list"></div>
 </div>
 
 <style is:global>
   .local-notes-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.4rem 0.25rem 0.2rem; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-foreground); }
+  .local-notes-head em { font-style: normal; opacity: 0.7; letter-spacing: 0; }
   .local-row { display: grid; grid-template-columns: 5.75rem minmax(0, 1fr) auto; align-items: center; gap: 1rem; width: 100%; padding: 0.9rem 0.25rem; border-bottom: 1px solid var(--border); text-align: left; transition: background-color 0.15s; }
   .local-row:hover { background: color-mix(in srgb, var(--muted) 50%, transparent); }
   .local-thumb { width: 5.75rem; height: 3.9rem; border-radius: 0.4rem; background: repeating-linear-gradient(135deg, var(--muted) 0 6px, color-mix(in srgb, var(--muted) 60%, var(--card)) 6px 12px); display: grid; place-items: center; }
@@ -23,54 +42,155 @@
   .local-sum { margin-top: 0.25rem; font-size: 0.78rem; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .local-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
   .local-date { font-size: 0.74rem; color: var(--muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .local-badge { font-size: 0.65rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); white-space: nowrap; }
-  .local-badge.synced { background: var(--muted); color: var(--muted-foreground); }
-  .local-badge.draft { background: color-mix(in srgb, #c9a040 18%, transparent); color: #8a6a14; }
+  .local-badge { font-size: 0.65rem; padding: 0.1rem 0.5rem; border-radius: 999px; white-space: nowrap; background: var(--muted); color: var(--muted-foreground); }
+  .local-badge.live    { background: color-mix(in srgb, #6a9a6f 20%, transparent); color: #4a7a52; }
+  .local-badge.building{ background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary); }
+  .local-badge.draft   { background: color-mix(in srgb, #c9a040 18%, transparent); color: #8a6a14; }
+  .local-badge.failed  { background: color-mix(in srgb, #c75050 18%, transparent); color: #a43a3a; }
+
+  .deploy { display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0.25rem 0.5rem; padding: 0.55rem 0.85rem; border-radius: 0.6rem; font-size: 0.8rem; background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--fg, var(--foreground)); }
+  .deploy.hidden { display: none; }
+  .deploy[data-state="success"] { background: color-mix(in srgb, #6a9a6f 14%, transparent); }
+  .deploy[data-state="failure"] { background: color-mix(in srgb, #c75050 14%, transparent); }
+  .deploy-spin { width: 0.9rem; height: 0.9rem; border-radius: 999px; border: 2px solid color-mix(in srgb, var(--primary) 35%, transparent); border-top-color: var(--primary); animation: deploy-spin 0.8s linear infinite; flex-shrink: 0; }
+  .deploy[data-state="success"] .deploy-spin, .deploy[data-state="failure"] .deploy-spin { animation: none; border-color: currentColor; border-top-color: transparent; }
+  .deploy-link { margin-left: auto; text-decoration: underline; opacity: 0.75; }
+  .deploy-link:hover { opacity: 1; }
+  @keyframes deploy-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .deploy-spin { animation: none; } }
   @media (max-width: 640px) { .local-row { grid-template-columns: 5rem minmax(0, 1fr); } .local-thumb { width: 5rem; height: 3.5rem; } .local-right { grid-column: 2; flex-direction: row; } }
 </style>
 
 <script>
-  import { load, isDirty, pending } from '../lib/notebook';
+  import { load, isDirty, pending, exportAll, importAll, lastSyncAt } from '../lib/notebook';
+  import { latestRun, actionsUrl } from '../lib/github';
 
   const root = document.getElementById('local-notes')!;
   const list = document.getElementById('local-notes-list')!;
+  const countEl = document.getElementById('local-count')!;
   const syncBtn = document.getElementById('local-sync-all') as HTMLButtonElement;
+  const deploy = document.getElementById('local-deploy')!;
+  const deployText = document.getElementById('deploy-text')!;
+  const deployLink = document.getElementById('deploy-link') as HTMLAnchorElement;
+  deployLink.href = actionsUrl();
+
   const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+  /* ── build status: follow the deploy after a sync ─────────────────────── */
+  type Phase = 'idle' | 'building' | 'live' | 'failed';
+  let phase: Phase = 'idle';
+  let pollTimer = 0, pollStart = 0;
+
+  function showDeploy() {
+    deploy.classList.remove('hidden');
+    deploy.dataset.state = phase === 'live' ? 'success' : phase === 'failed' ? 'failure' : '';
+  }
+  function hideDeploy() { deploy.classList.add('hidden'); }
+
+  async function pollBuild() {
+    const since = lastSyncAt();
+    if (!since) { phase = 'idle'; return; }
+    const run = await latestRun(since);
+    if (!run) { // no token or API hiccup — don't nag, just stop
+      phase = 'idle'; hideDeploy(); return;
+    }
+    if (run.status !== 'completed') {
+      phase = 'building';
+      deployText.textContent = '已提交,网站正在重新构建…(约 1~2 分钟)';
+      showDeploy();
+    } else if (run.conclusion === 'success') {
+      phase = 'live';
+      deployText.textContent = '已上线 ✓ 刷新就能看到最新内容';
+      deployLink.textContent = '查看网站';
+      deployLink.href = '.';
+      showDeploy();
+      // Auto-hide the success note after a while.
+      clearTimeout(pollTimer);
+      pollTimer = window.setTimeout(hideDeploy, 60000);
+      return;
+    } else {
+      phase = 'failed';
+      deployText.textContent = '构建失败了,笔记没能上线(点右边看日志)';
+      deployLink.textContent = '看日志';
+      deployLink.href = run.url;
+      showDeploy();
+      return;
+    }
+    // keep polling while building; give up after ~4 minutes
+    if (Date.now() - pollStart < 240000) pollTimer = window.setTimeout(pollBuild, 8000);
+  }
+  function startPolling() { pollStart = Date.now(); clearTimeout(pollTimer); pollBuild(); }
+
+  /* ── list ─────────────────────────────────────────────────────────────── */
+  function badgeFor(n: any, dirty: boolean): { text: string; cls: string } {
+    if (n.draft) return { text: n.syncedAt ? '草稿 · 已同步但不公开' : '草稿 · 还没同步', cls: 'draft' };
+    if (!n.syncedAt) return { text: '还没同步', cls: '' };
+    if (dirty) return { text: '有改动未同步', cls: '' };
+    if (phase === 'building') return { text: '上线中…', cls: 'building' };
+    if (phase === 'failed') return { text: '构建失败', cls: 'failed' };
+    return { text: '已上线 ✓', cls: 'live' };
+  }
 
   function render() {
     const notes = Object.values(load().notes).sort((a, b) => b.updatedAt - a.updatedAt);
-    // Keep showing anything that is NOT visible on the public site yet:
-    // never synced, changed since sync, or synced but still marked as draft
-    // (the build skips drafts, so it won't appear in the list below).
-    const local = notes.filter((n) => isDirty(n) || !n.syncedAt || n.draft);
-    root.classList.toggle('hidden', local.length === 0);
+    // Show EVERY local page. Nothing ever leaves this list on its own — the
+    // badge tells you where it is.
+    root.classList.toggle('hidden', notes.length === 0);
+    countEl.textContent = notes.length ? `· ${notes.length}` : '';
     syncBtn.classList.toggle('hidden', pending().count === 0);
     list.innerHTML = '';
-    for (const n of local) {
+    for (const n of notes) {
       const row = document.createElement('button');
       row.type = 'button'; row.className = 'local-row';
       const firstLine = (n.summary || n.body.split('\n').find((l) => l.trim() && !l.startsWith('#')) || '').replace(/[#*`>_\-\[\]]/g, '').trim();
-      const dirty = isDirty(n);
-      let badge: string, cls = '';
-      if (n.draft) { badge = n.syncedAt ? '草稿 · 已同步但不公开' : '草稿 · 还没同步'; cls = 'draft'; }
-      else if (!n.syncedAt) badge = '还没同步';
-      else if (dirty) badge = '有改动未同步';
-      else { badge = '已同步'; cls = 'synced'; }
+      const b = badgeFor(n, isDirty(n));
       row.innerHTML = `
         <span class="local-thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
         <span class="min-w-0"><span class="local-title">${esc(n.title || '(无标题)')}</span>${firstLine ? `<span class="local-sum">${esc(firstLine)}</span>` : ''}</span>
-        <span class="local-right"><span class="local-date">${n.date}</span><span class="local-badge ${cls}">${badge}</span></span>`;
+        <span class="local-right"><span class="local-date">${n.date}</span><span class="local-badge ${b.cls}">${b.text}</span></span>`;
       row.onclick = () => (window as any).__notebook?.open(n.slug);
       list.appendChild(row);
     }
   }
+
+  /* ── sync ─────────────────────────────────────────────────────────────── */
   syncBtn.onclick = async () => {
     syncBtn.disabled = true; syncBtn.textContent = '同步中…';
     const r = await (window as any).__notebook?.syncAll?.();
-    syncBtn.disabled = false; syncBtn.textContent = r?.ok ? '已同步 ✓ 约 1~2 分钟后更新' : '同步全部到网站';
+    syncBtn.disabled = false; syncBtn.textContent = '同步全部';
+    if (r?.ok && r.pushed + r.deleted > 0) startPolling();
+    else if (r && !r.ok) alert('有内容没同步成功:\n' + r.errors.join('\n'));
     render();
   };
+
+  /* ── export / import ──────────────────────────────────────────────────── */
+  document.getElementById('local-export')!.addEventListener('click', () => {
+    const blob = new Blob([exportAll()], { type: 'application/json;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `hard2exp-备份-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  const fileInput = document.getElementById('local-import-file') as HTMLInputElement;
+  document.getElementById('local-import')!.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const f = fileInput.files?.[0];
+    if (!f) return;
+    try {
+      const res = importAll(await f.text());
+      render();
+      alert(`导入完成:新增 ${res.added} 篇,更新 ${res.updated} 篇,跳过 ${res.skipped} 篇(本地已有更新的版本)。`);
+    } catch (e: any) {
+      alert('导入失败:' + (e?.message || e));
+    }
+    fileInput.value = '';
+  });
+
   window.addEventListener('notebook:change', render);
   window.addEventListener('storage', render);
   render();
+
+  // On load: if a sync happened recently, resume following its build.
+  if (lastSyncAt()) startPolling();
 </script>

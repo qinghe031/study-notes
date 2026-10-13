@@ -87,3 +87,30 @@ export async function deleteFile(path: string, sha: string, message: string, tok
 export const actionsUrl = () => `https://github.com/${GH.owner}/${GH.repo}/actions`;
 export const newTokenUrl = () =>
   `https://github.com/settings/personal-access-tokens/new?name=study-notes-editor&description=${encodeURIComponent('学习笔记站在线编辑')}`;
+
+export interface BuildStatus {
+  /** queued | in_progress | completed */
+  status: string;
+  /** success | failure | cancelled | null while still running */
+  conclusion: string | null;
+  url: string;
+  createdAt: string;
+}
+
+/** Latest Pages build run, so we can tell the writer whether their note is live
+ *  yet. Uses the same token; a read-only public repo also works unauthenticated. */
+export async function latestRun(sinceMs = 0, token = getToken()): Promise<BuildStatus | null> {
+  try {
+    const r = await fetch(`${repoUrl()}/actions/runs?per_page=5`, { headers: headers(token) });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const runs: any[] = j.workflow_runs || [];
+    // Prefer the newest run created after the sync moment; else the newest.
+    const after = runs.filter((x) => new Date(x.created_at).getTime() >= sinceMs - 5000);
+    const w = after[0] || runs[0];
+    if (!w) return null;
+    return { status: w.status, conclusion: w.conclusion, url: w.html_url, createdAt: w.created_at };
+  } catch {
+    return null;
+  }
+}
